@@ -1,4 +1,5 @@
 {
   "consul": "server",
-  "nomad": "server"
+  "nomad": "server",
+  "promarch": "linux-armv7"
 }

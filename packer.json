@@ -4,8 +4,11 @@
     "wifi_name": "",
     "wifi_password": "",
     "nomad": "",
-    "consul": "",
-    "nodearch": "linux-armv7"
+    "consul": "client",
+    "dnsmasq": "true",
+    "promarch": "linux-armv7",
+    "prometheus": "",
+    "corehosts": ""
   },
   "sensitive-variables": ["wifi_password"],
   "builders": [{
@@ -64,6 +67,10 @@
       "type": "shell",
       "inline": ["/tmp/terraform-aws-consul/modules/install-consul/install-consul --version 1.4.2 --arch linux_arm"]
     },
+    {
+      "type": "shell",
+      "inline": ["test -z \"{{user `dnsmasq`}}\" || /tmp/terraform-aws-consul/modules/install-dnsmasq/install-dnsmasq"]
+    },
 
     {
       "type": "file",
@@ -105,23 +112,36 @@
 
     {
       "type": "file",
-      "source": "/vagrant/install-node_exporter",
-      "destination": "/tmp/"
-    },
-    {
-      "type": "file",
-      "source": "/vagrant/run-node_exporter",
+      "source": "/vagrant/node_exporter",
       "destination": "/tmp/"
     },
     {
       "type": "shell",
-      "inline": ["/tmp/install-node_exporter/install-node_exporter --version 0.17.0 --arch {{user `nodearch`}}"]
+      "inline": ["/tmp/node_exporter/install-node_exporter/install-node_exporter --version 0.17.0 --arch {{user `promarch`}}"]
     },
     {
       "type": "shell",
       "inline": [
         "sed -i -e '/^exit 0$/d' /etc/rc.local",
         "echo /opt/prometheus/bin/run-node_exporter >> /etc/rc.local"
+      ]
+    },
+
+    {
+      "type": "file",
+      "source": "/vagrant/prometheus",
+      "destination": "/tmp/"
+    },
+    {
+      "type": "shell",
+      "inline": ["/tmp/prometheus/install-prometheus/install-prometheus --version 2.7.1 --arch {{user `promarch`}}"]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "NODE_EXPORTER_TARGETS=$(echo {{user `corehosts`}}|sed 's/\\(,\\|$\\)/:9100\\1/g') NOMAD_TARGETS=$(echo {{user `corehosts`}}|sed 's/\\(,\\|$\\)/:4646\\1/g') CONSUL_TARGETS=$(echo {{user `corehosts`}}|sed 's/\\(,\\|$\\)/:8500\\1/g') envsubst < /tmp/prometheus/prometheus.yml > /opt/prometheus/config/prometheus.yml",
+        "sed -i -e '/^exit 0$/d' /etc/rc.local",
+        "test -z \"{{user `prometheus`}}\" || echo /opt/prometheus/bin/run-prometheus >> /etc/rc.local"
       ]
     }
   ]
