@@ -5,10 +5,11 @@
     "wifi_password": "",
     "nomad": "",
     "consul": "client",
-    "dnsmasq": "true",
+    "dnsmasq": "",
     "promarch": "linux-armv7",
     "prometheus": "",
-    "corehosts": ""
+    "corehosts": "",
+    "terraform": ""
   },
   "sensitive-variables": ["wifi_password"],
   "builders": [{
@@ -55,7 +56,7 @@
     },
     {
       "type": "shell",
-      "inline": ["apt-get update -y; apt-get install -y dnsutils lsof strace"]
+      "inline": ["apt-get update -y; apt-get install -y dnsutils lsof strace git"]
     },
 
     {
@@ -142,6 +143,13 @@
         "NODE_EXPORTER_TARGETS=$(echo {{user `corehosts`}}|sed 's/\\(,\\|$\\)/:9100\\1/g') NOMAD_TARGETS=$(echo {{user `corehosts`}}|sed 's/\\(,\\|$\\)/:4646\\1/g') CONSUL_TARGETS=$(echo {{user `corehosts`}}|sed 's/\\(,\\|$\\)/:8500\\1/g') envsubst < /tmp/prometheus/prometheus.yml > /opt/prometheus/config/prometheus.yml",
         "sed -i -e '/^exit 0$/d' /etc/rc.local",
         "test -z \"{{user `prometheus`}}\" || echo /opt/prometheus/bin/run-prometheus >> /etc/rc.local"
+      ]
+    },
+
+    {
+      "type": "shell",
+      "inline": [
+        "test -z \"{{user `terraform`}}\" || (curl -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/0.11.11/terraform_0.11.11_linux_arm.zip && unzip -d /usr/local/bin/ /tmp/terraform.zip)"
       ]
     }
   ]
