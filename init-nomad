@@ -1,0 +1,58 @@
+#!/bin/bash
+
+set -e
+server=$1
+
+NOMAD_DIR=$(dirname $0)
+if [ -f $NOMAD_DIR/inited ]; then
+  exit
+fi
+
+myName="localhost"
+while [ "$myName" = "localhost" ]; do
+  myName=$(hostname -s)
+  sleep 1
+done
+myIP=$(hostname -i)
+
+srvopts="--client"
+if [ "$server" = "server" ]; then
+  srvopts="--server --num-servers 3"
+  cat - > $NOMAD_DIR/config/config.hcl << EOF
+server {
+  enabled = true
+  bootstrap_expect = 3
+}
+consul {
+  address = "127.0.0.1:8500"
+}
+telemetry {
+  disable_hostname = true
+  prometheus_metrics = true
+}
+advertise {
+  http = "$myIP"
+  rpc  = "$myIP"
+  serf = "$myIP"
+}
+disable_update_check = true
+log_level = "INFO"
+enable_syslog = true
+EOF
+else
+  cat - > $NOMAD_DIR/config/config.hcl << EOF
+client {
+  enabled = true
+}
+consul {
+  address = "127.0.0.1:8500"
+}
+disable_update_check = true
+log_level = "INFO"
+EOF
+fi
+
+bash -x $NOMAD_DIR/bin/run-nomad $srvopts --skip-nomad-config \
+  > $NOMAD_DIR/log/run-nomad.stdout 2> $NOMAD_DIR/log/run-nomad.stderr
+
+touch $NOMAD_DIR/inited 

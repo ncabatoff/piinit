@@ -1,0 +1,68 @@
+#!/bin/bash
+
+set -e
+server=$1
+
+CONSUL_DIR=$(dirname $0)
+if [ -f $CONSUL_DIR/inited ]; then
+  exit
+fi
+
+# Before DHCP completes hostname -i will return "::1 127.0.0.1"
+myName="localhost"
+while [ "$myName" = "localhost" ]; do
+  myName=$(hostname -s)
+  sleep 1
+done
+myIP=$(hostname -i)
+
+# TODO generate encrypt key
+encryptKey="qPUu/jorv+j6SQchaRJfMQ=="
+
+srvopts="--client"
+if [ "$server" = "server" ]; then
+  srvopts="--server"
+  cat - > $CONSUL_DIR/config/config.json << EOF
+{
+    "bind_addr": "$myIP",
+    "bootstrap_expect": 3,
+    "client_addr": "0.0.0.0",
+    "disable_update_check": true,
+    "enable_local_script_checks": true,
+    "enable_syslog": true,
+    "encrypt": "$encryptKey",
+    "log_level": "INFO",
+    "node_name": "$myName",
+    "retry_join": [
+        "192.168.2.51",
+        "192.168.2.52",
+        "192.168.2.53"
+    ],
+    "server": true,
+    "telemetry": {
+        "disable_hostname": true,
+        "prometheus_retention_time": "10m"
+    },
+    "ui": true
+}
+EOF
+else
+  cat - > $CONSUL_DIR/config/config.json << EOF
+{
+    "disable_update_check": true,
+    "encrypt": "$encryptKey",
+    "log_level": "INFO",
+    "node_name": "$myName",
+    "retry_join": [
+        "192.168.2.51",
+        "192.168.2.52",
+        "192.168.2.53"
+    ]
+}
+EOF
+fi
+
+bash -x $CONSUL_DIR/bin/run-consul $srvopts --skip-consul-config --datacenter dc1 \
+  > $CONSUL_DIR/log/run-consul.stdout 2> $CONSUL_DIR/log/run-consul.stderr
+
+touch $CONSUL_DIR/inited 
