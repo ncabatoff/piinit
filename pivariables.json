@@ -1,0 +1,4 @@
+{
+  "consul": "server",
+  "nomad": "server"
+}
