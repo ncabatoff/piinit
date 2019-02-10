@@ -4,7 +4,8 @@
     "wifi_name": "",
     "wifi_password": "",
     "nomad": "",
-    "consul": ""
+    "consul": "",
+    "nodearch": "linux-armv7"
   },
   "sensitive-variables": ["wifi_password"],
   "builders": [{
@@ -51,7 +52,7 @@
     },
     {
       "type": "shell",
-      "inline": ["apt-get update -y; apt-get install -y dnsutils"]
+      "inline": ["apt-get update -y; apt-get install -y dnsutils lsof strace"]
     },
 
     {
@@ -99,6 +100,28 @@
         "chmod 755 /opt/nomad/init-nomad",
         "sed -i -e '/^exit 0$/d' /etc/rc.local",
         "test -z \"{{user `nomad`}}\" || echo '/opt/nomad/init-nomad {{user `nomad`}} &' >> /etc/rc.local"
+      ]
+    },
+
+    {
+      "type": "file",
+      "source": "/vagrant/install-node_exporter",
+      "destination": "/tmp/"
+    },
+    {
+      "type": "file",
+      "source": "/vagrant/run-node_exporter",
+      "destination": "/tmp/"
+    },
+    {
+      "type": "shell",
+      "inline": ["/tmp/install-node_exporter/install-node_exporter --version 0.17.0 --arch {{user `nodearch`}}"]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "sed -i -e '/^exit 0$/d' /etc/rc.local",
+        "echo /opt/prometheus/bin/run-node_exporter >> /etc/rc.local"
       ]
     }
   ]

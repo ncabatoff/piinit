@@ -1,4 +1,4 @@
-packer-builder-arm-image/
+packer-builder-arm-image
 zpivariables.json
 authorized_keys
 .idea
