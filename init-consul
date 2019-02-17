@@ -30,7 +30,6 @@ if [ "$server" = "server" ]; then
     "disable_update_check": true,
     "disable_host_node_id": false,
     "enable_local_script_checks": true,
-    "enable_syslog": true,
     "encrypt": "$encryptKey",
     "log_level": "INFO",
     "node_name": "$myName",

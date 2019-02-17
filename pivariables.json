@@ -1,5 +1,6 @@
 {
   "consul": "server",
   "nomad": "server",
-  "promarch": "linux-armv7"
+  "promarch": "linux-armv7",
+  "hasharch": "linux_arm"
 }

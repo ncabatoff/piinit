@@ -37,7 +37,6 @@ advertise {
 }
 disable_update_check = true
 log_level = "INFO"
-enable_syslog = true
 EOF
 else
   cat - > $NOMAD_DIR/config/config.hcl << EOF
