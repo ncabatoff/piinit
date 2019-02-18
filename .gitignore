@@ -1,4 +1,6 @@
+.idea
 packer-builder-arm-image
+pkgbuilder
 zpivariables.json
 authorized_keys
-.idea
+consul-client-pi.hcl

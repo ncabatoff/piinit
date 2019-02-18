@@ -1,20 +1,14 @@
 local provisioner = import 'provisioners.jsonnet';
 local from = "/vagrant";
 {
-  "variables": {
-    "home": "{{env `HOME`}}",
-    "wifi_name": "",
-    "wifi_password": "",
-    "nomad": "",
-    "consul": "client",
-    "dnsmasq": "",
-    "promarch": "linux-armv7",
-    "prometheus": "",
-    "corehosts": "",
-    "terraform": "",
+  variables: {
+    home: "{{env `HOME`}}",
+    wifi_name: "",
+    wifi_password: "",
+    packages: "./arm/consul.deb",
   },
   "sensitive-variables": ["wifi_password"],
-  "builders": [{
+  builders: [{
     "type": "arm-image",
     "iso_url" : "file:///vagrant/2018-11-13-raspbian-stretch-lite.img",
     "iso_checksum_type":"sha256",
@@ -22,12 +16,10 @@ local from = "/vagrant";
     "last_partition_extra_size" : 1073741824,
   }],
   provisioners:
+    provisioner.prov_custompkgs("/vagrant/pkgbuilder/", ["arm", "armv6", "armv7", "all"]) +
+    provisioner.prov_aptinst(["supervisor", "iproute2", "curl", "procps"]) +
+    provisioner.prov_aptinst(["{{user `packages`}}"]) +
     provisioner.prov_pi(from) +
     provisioner.prov_wifi(from) +
-    provisioner.prov_aptinst(from) +
-    provisioner.prov_consul(from) +
-    provisioner.prov_nomad(from) +
-    provisioner.prov_node_exporter(from) +
-    provisioner.prov_prometheus(from) +
-    provisioner.prov_terraform(from),
+    provisioner.prov_prometheus(["192.168.2.51", "192.168.2.52", "192.168.2.53"])
 }

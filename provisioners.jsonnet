@@ -18,8 +18,14 @@
           "destination": "/home/pi/.ssh/authorized_keys"
         },
         {
+          "type": "file",
+          "source": from + "/consul-client-pi.hcl",
+          "destination": "/opt/consul/config/"
+        },
+        {
           "type": "shell",
           "inline": [
+            "chown consul.consul /opt/consul/config/consul-client-pi.hcl",
             "chmod 0600 /home/pi/.ssh/authorized_keys",
             "chown -R pi.pi /home/pi/.ssh",
           ]
@@ -36,119 +42,137 @@
         },
       ],
 
-  prov_aptinst(from)::
+  prov_aptinst(pkgs)::
       [
         {
-          "type": "shell",
-          "inline": [
-            "apt-get update -y; apt-get install -y dnsutils lsof strace git",
-            "apt-get install -y sudo gettext-base procps",
-            "touch /etc/rc.local",
+          type: "shell",
+          inline: [
+            "apt-get update -y; DEBIAN_FRONTEND=noninteractive apt-get install -y " + std.join(' ', pkgs)
           ]
         },
       ],
 
-  prov_consul(from)::
+  prov_makecustompkgs()::
       [
         {
-          "type": "shell",
-          "inline": [
-            "cd /tmp && git clone https://github.com/ncabatoff/terraform-aws-consul",
-            "bash -x /tmp/terraform-aws-consul/modules/install-consul/install-consul --version 1.4.2 --arch {{user `hasharch`}}",
-            "test -z \"{{user `dnsmasq`}}\" || /tmp/terraform-aws-consul/modules/install-dnsmasq/install-dnsmasq"
-          ]
-        },
-        {
-          "type": "file",
-          "source": from + "/init-consul",
-          "destination": "/opt/consul/"
-        },
-        {
-          "type": "shell",
-          "inline": [
-            "chmod 755 /opt/consul/init-consul",
-            "sed -i -e '/^exit 0$/d' /etc/rc.local",
-            "test -z \"{{user `consul`}}\" || echo '/opt/consul/init-consul {{user `consul`}} &' >> /etc/rc.local"
-          ]
+          type: "shell-local",
+          inline: [
+            "test -d pkgbuilder || git clone https://github.com/ncabatoff/pkgbuilder",
+            "cd pkgbuilder",
+            "go get github.com/hashicorp/go-getter/cmd/go-getter",
+            "make packages",
+          ],
         },
       ],
 
-  prov_nomad(from)::
+  prov_custompkgs(from, arches)::
+      [{type: "file", generated: true, source: from+a, destination: a} for a in arches],
+
+  prov_prometheus(hosts)::
       [
         {
-          "type": "shell",
+          "type": "shell-local",
           "inline": [
-            "cd /tmp && git clone https://github.com/ncabatoff/terraform-aws-nomad",
-            "/tmp/terraform-aws-nomad/modules/install-nomad/install-nomad --version 0.8.7 --arch {{user `hasharch`}}",
+            "cat - > prometheus.yml <<EOF\n" + std.manifestYamlDoc(
+            {
+              global: {
+                scrape_interval: "15s",
+              },
+
+              scrape_configs: [
+                {
+                  job_name: "prometheus",
+                  static_configs: [
+                    {
+                      targets: ['localhost:9090'],
+                    },
+                  ],
+                },
+                {
+                  job_name: "node",
+                  static_configs: [
+                    {
+                      targets: [h + ":9100" for h in hosts] + ['localhost:9100'],
+                    },
+                  ],
+                },
+                {
+                  job_name: "consul-servers",
+                  static_configs: [
+                    {
+                      targets: [h + ":8500" for h in hosts],
+                    },
+                  ],
+                  metrics_path: "/v1/agent/metrics",
+                  params: {
+                    format: ["prometheus"],
+                  },
+                },
+                {
+                  job_name: "nomad-servers",
+                  static_configs: [
+                    {
+                      targets: [h + ":4646" for h in hosts],
+                    },
+                  ],
+                  metrics_path: "/v1/metrics",
+                  params: {
+                    format: ["prometheus"],
+                  },
+                },
+                {
+                  job_name: "consul-services",
+                  consul_sd_configs: [
+                    {
+                      server: "localhost:8500",
+                    },
+                  ],
+                  relabel_configs: [
+                    {
+                      source_labels: ["__meta_consul_tags"],
+                      regex: ".*,prom,.*",
+                      action: "keep",
+                    },
+                    {
+                      source_labels: ["__meta_consul_service"],
+                      target_label: "job",
+                    },
+                  ],
+                },
+                {
+                  job_name: "nomad-clients",
+                  consul_sd_configs: [
+                    {
+                      server: "localhost:8500",
+                      services: ['nomad-client'],
+                    },
+                  ],
+                  metrics_path: "/v1/metrics",
+                  params: {
+                    format: ["prometheus"],
+                  },
+                  relabel_configs: [
+                    {
+                      source_labels: ["__meta_consul_tags"],
+                      regex: "(.*)http(.*)",
+                      action: "keep",
+                    },
+                  ],
+                },
+              ],
+            }) + "\nEOF\n"
           ]
         },
         {
-          "type": "file",
-          "source": from + "/init-nomad",
-          "destination": "/opt/nomad/"
+          type: "shell",
+          inline: ["mkdir -p /opt/prometheus/config/"],
         },
         {
-          "type": "shell",
-          "inline": [
-            "chmod 755 /opt/nomad/init-nomad",
-            "sed -i -e '/^exit 0$/d' /etc/rc.local",
-            "test -z \"{{user `nomad`}}\" || echo '/opt/nomad/init-nomad {{user `nomad`}} &' >> /etc/rc.local"
-          ]
+          type: "file",
+          generated: true,
+          source: "prometheus.yml",
+          destination: "/opt/prometheus/config/",
         },
       ],
 
-  prov_node_exporter(from)::
-      [
-        {
-          "type": "file",
-          "source": from+"/node_exporter",
-          "destination": "/tmp/"
-        },
-        {
-          "type": "shell",
-          "inline": [
-            "/tmp/node_exporter/install-node_exporter/install-node_exporter --version 0.17.0 --arch {{user `promarch`}}"
-          ]
-        },
-        {
-          "type": "shell",
-          "inline": [
-            "sed -i -e '/^exit 0$/d' /etc/rc.local",
-            "echo /opt/prometheus/bin/run-node_exporter >> /etc/rc.local"
-          ]
-        },
-      ],
-
-  prov_prometheus(from)::
-      [
-        {
-          "type": "file",
-          "source": from+"/prometheus",
-          "destination": "/tmp/"
-        },
-        {
-          "type": "shell",
-          "inline": [
-            "/tmp/prometheus/install-prometheus/install-prometheus --version 2.7.1 --arch {{user `promarch`}}"
-          ]
-        },
-        {
-          "type": "shell",
-          "inline": [
-            "NODE_EXPORTER_TARGETS=$(echo {{user `corehosts`}}|sed 's/\\(,\\|$\\)/:9100\\1/g') NOMAD_TARGETS=$(echo {{user `corehosts`}}|sed 's/\\(,\\|$\\)/:4646\\1/g') CONSUL_TARGETS=$(echo {{user `corehosts`}}|sed 's/\\(,\\|$\\)/:8500\\1/g') envsubst < /tmp/prometheus/prometheus.yml > /opt/prometheus/config/prometheus.yml",
-            "sed -i -e '/^exit 0$/d' /etc/rc.local",
-            "test -z \"{{user `prometheus`}}\" || echo /opt/prometheus/bin/run-prometheus >> /etc/rc.local"
-          ]
-        },
-      ],
-
-  prov_terraform(from)::
-      [
-        {
-          "type": "shell",
-          "inline": [
-            "test -z \"{{user `terraform`}}\" || (curl -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/0.11.11/terraform_0.11.11_{{user `hasharch`}}.zip && unzip -d /usr/local/bin/ /tmp/terraform.zip)"
-          ]
-        }
-      ],
 }
