@@ -2,7 +2,7 @@ local provisioner = import 'provisioners.jsonnet';
 {
   "variables": {
     coreips: "",
-    packages: "./amd64/consul.deb ./amd64/nomad.deb ./amd64/node_exporter.deb ./all/nomad-server.deb ./all/consul-client.deb ./all/consul-server.deb",
+    packages: "./amd64/consul.deb ./amd64/nomad.deb ./amd64/node_exporter.deb ./amd64/prometheus.deb ./all/nomad-server.deb ./all/consul-client.deb ./all/consul-server.deb",
   },
   "builders": [{
     type: "docker",
