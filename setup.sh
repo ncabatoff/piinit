@@ -2,18 +2,19 @@
 
 set -e
 
-iso_url=$(jq -r .builders[0].iso_url < packer.json)
-iso_base=$(basename "$iso_url")
+# It is assumed that this script is invoked from within the packer-builder-arm-image
+# git checkout.
+# vagrant up --provision-with build-env,packer-builder-arm-image
 
-test -d packer-builder-arm-image || git clone https://github.com/ncabatoff/packer-builder-arm-image
-cd packer-builder-arm-image
+#if [ "`which jsonnet`" == "" ]; then
+#    echo "Installing go-jsonnet"
+#    go get github.com/fatih/color github.com/google/go-jsonnet
+#    cd $GOPATH/src/github.com/google/go-jsonnet/jsonnet
+#    go install
+#fi
 
-go get github.com/hashicorp/go-getter/cmd/go-getter
-test -d pkgbuilder || git clone https://github.com/ncabatoff/pkgbuilder
-cd pkgbuilder
-make packages
-cd ..
+#echo "Downloading ARM OS image"
+#iso_url=$(jq -r .builders[0].iso_url < packer-arm.json)
+#iso_base=$(basename "$iso_url")
+#test -f "$iso_base" || wget https://downloads.raspberrypi.org/raspbian_lite/images/"$iso_base"
 
-test -f "$iso_base" || wget https://downloads.raspberrypi.org/raspbian_lite/images/"$iso_base"
-
-vagrant up --provision-with build-env,packer-builder-arm-image

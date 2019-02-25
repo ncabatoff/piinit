@@ -1,34 +1,14 @@
 {
-  prov_pi(from)::
+  prov_consulclient(hcl)::
       [
         {
-          "type": "shell",
-          "inline": [
-            "echo  >> /etc/ssh/ssh_config",
-            "sed '/PasswordAuthentication/d' -i /etc/ssh/ssh_config",
-            "echo 'PasswordAuthentication no' >> /etc/ssh/ssh_config",
-            "echo localhost > /etc/hostname",
-            "touch /boot/ssh",
-            "mkdir -p -m 0700 /home/pi/.ssh",
-          ]
-        },
-        {
           "type": "file",
-          "source": from + "/authorized_keys",
-          "destination": "/home/pi/.ssh/authorized_keys"
-        },
-        {
-          "type": "file",
-          "source": from + "/consul-client-pi.hcl",
-          "destination": "/opt/consul/config/"
+          "source": hcl,
+          "destination": "/opt/consul/config/client.hcl"
         },
         {
           "type": "shell",
-          "inline": [
-            "chown consul.consul /opt/consul/config/consul-client-pi.hcl",
-            "chmod 0600 /home/pi/.ssh/authorized_keys",
-            "chown -R pi.pi /home/pi/.ssh",
-          ]
+          "inline": ["chown consul.consul /opt/consul/config/client.hcl"]
         },
       ],
 
@@ -52,18 +32,18 @@
         },
       ],
 
-  prov_makecustompkgs()::
-      [
-        {
-          type: "shell-local",
-          inline: [
-            "test -d pkgbuilder || git clone https://github.com/ncabatoff/pkgbuilder",
-            "cd pkgbuilder",
-            "go get github.com/hashicorp/go-getter/cmd/go-getter",
-            "make packages",
-          ],
-        },
-      ],
+//  prov_makecustompkgs()::
+//      [
+//        {
+//          type: "shell-local",
+//          inline: [
+//            "test -d pkgbuilder || git clone https://github.com/ncabatoff/pkgbuilder",
+//            "cd pkgbuilder",
+//            "go get github.com/hashicorp/go-getter/cmd/go-getter",
+//            "make packages",
+//          ],
+//        },
+//      ],
 
   prov_custompkgs(from, arches)::
       [{type: "file", generated: true, source: from+a, destination: a} for a in arches],

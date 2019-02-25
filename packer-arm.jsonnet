@@ -16,10 +16,35 @@ local from = "/vagrant";
     "last_partition_extra_size" : 1073741824,
   }],
   provisioners:
-    provisioner.prov_custompkgs("/vagrant/pkgbuilder/", ["arm", "armv6", "armv7", "all"]) +
+    provisioner.prov_custompkgs("/vagrant/packages/", ["arm", "armv6", "armv7", "all"]) +
     provisioner.prov_aptinst(["supervisor", "iproute2", "curl", "procps"]) +
     provisioner.prov_aptinst(["{{user `packages`}}"]) +
-    provisioner.prov_pi(from) +
+    provisioner.prov_consulclient("/vagrant/consul-client-pi.hcl") +
+      [
+        {
+          "type": "shell",
+          "inline": [
+            "echo  >> /etc/ssh/ssh_config",
+            "sed '/PasswordAuthentication/d' -i /etc/ssh/ssh_config",
+            "echo 'PasswordAuthentication no' >> /etc/ssh/ssh_config",
+            "echo localhost > /etc/hostname",
+            "touch /boot/ssh",
+            "mkdir -p -m 0700 /home/pi/.ssh",
+          ]
+        },
+        {
+          "type": "file",
+          "source": from + "/authorized_keys",
+          "destination": "/home/pi/.ssh/authorized_keys"
+        },
+        {
+          "type": "shell",
+          "inline": [
+            "chmod 0600 /home/pi/.ssh/authorized_keys",
+            "chown -R pi.pi /home/pi/.ssh",
+          ]
+        },
+      ] +
     provisioner.prov_wifi(from) +
     provisioner.prov_prometheus(["192.168.2.51", "192.168.2.52", "192.168.2.53"])
 }

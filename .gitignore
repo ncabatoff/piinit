@@ -4,3 +4,5 @@ pkgbuilder
 zpivariables.json
 authorized_keys
 consul-client-pi.hcl
+consul-client-docker.hcl
+packer*.json

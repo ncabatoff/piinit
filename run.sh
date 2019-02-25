@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
 set -e
-WORKDIR=packer-builder-arm-image
-cp ~/.ssh/id_rsa.pub $WORKDIR/authorized_keys
-cp *.json consul-client-pi.hcl $WORKDIR
-cd $WORKDIR
+cp ~/.ssh/id_rsa.pub ./authorized_keys
+source=$(dirname $0)
+make -C $source
+cp $source/*.json $source/consul-client-*.hcl .
+
 PACKERFILE=packer-arm.json vagrant provision --provision-with build-image
