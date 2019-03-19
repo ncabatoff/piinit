@@ -155,4 +155,40 @@
         },
       ],
 
+  prov_prometheus_register()::
+      [
+        {
+          "type": "shell-local",
+          "inline": [
+            "cat - > prometheus.json <<EOF\n" + std.manifestJsonEx(
+            {
+                "service": {
+                  "id": "prometheus",   // TODO make unique
+                  "name": "prometheus",
+                  "tags": ["primary"],  // TODO make prom-discoverable
+                  "port": 9090,
+                  "enable_tag_override": false,
+                  "checks": [
+                    {
+                        "id": "api",
+                        "name": "HTTP API on port 9090",
+                        "http": "http://localhost:9090/metrics",
+                        // "tls_skip_verify": true,
+                        "method": "GET",
+                        // "header": {"x-foo":["bar", "baz"]},
+                        "interval": "10s",
+                        "timeout": "1s"
+                    }
+                  ],
+                }
+            }, "  ") + "\nEOF\n"
+          ]
+        },
+        {
+          type: "file",
+          generated: true,
+          source: "prometheus.json",
+          destination: "/opt/consul/config/prometheus.json",
+        },
+      ],
 }
