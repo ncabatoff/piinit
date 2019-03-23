@@ -2,7 +2,7 @@ local provisioner = import 'provisioners.jsonnet';
 local from = "/vagrant";
 {
   variables: {
-    home: "{{env `HOME`}}",
+    // home: "{{env `HOME`}}",
     wifi_name: "",
     wifi_password: "",
     packages: "./arm/consul.deb",

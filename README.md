@@ -7,13 +7,43 @@ The primary target is low-power ARM single-board computers like the Raspberry Pi
 Docker is also supported for testing purposes.
 
 Unlike most other non-cloud-based approaches for creating Consul clusters, we use 
-"immutable" machine images.  A single OS image is used for every server in the
-cluster, rather than running configuration software like Ansible to setup the
-cluster.  In principle you could even abstain from installing SSH.
+a single "immutable" machine image shared by each of the nodes.  The OS
+isn't modified after burning the image to SD card, except for the data
+directories and logs written by the applications themselves.  This is in contrast 
+to traditional provisioning/config mgmt solutions like Ansible or Chef.
+In principle you could even abstain from installing SSH.
 
 This immutable approach is nice for a variety of reasons, and a nice bonus is
-that it saves time when building the SD cards for the Pi servers, since the
-same image can be burned to every card.
+that it saves time when initializing the Pi servers, since the image is built 
+only once and then burned to every card.
+
+# Test environment
+
+To try out a virtual version of the cluster, install Virtualbox and Vagrant,
+then run
+
+```bash
+vagrant up
+```
+
+This will create a VM containing all the dependencies, then build and run
+docker images representing the core nomad/consul and prometheus servers.  It
+will also setup nomad in client mode on the virtual machine and configure DNS
+resolution to send queries for the .consul domain to the virtual cluster.
+
+To test that everything is running:
+
+```bash
+vagrant ssh
+consul members
+nomad server members
+```
+
+Note that although the cluster will be restarted when the VM is rebooted, its
+state will be wiped.  This is by design, though it's easy enough to add volume
+mappings to docker-launch.sh if you'd rather the state persisted.
+
+# Real environment
 
 ## Hardware
 
@@ -25,52 +55,6 @@ card at full speed, but it's still worth it for faster burn times.
 If you don't already have a USB3 Micro SD card reader that supports higher-speed
 card standards like UHS, get one, again to minimize burn time.
 
-## Dependencies
-
-To build Pi images: 
-- [Vagrant](https://www.vagrantup.com/)
-- Something to run virtual machines, e.g. VirtualBox.  
-
-To build the Packer config: 
-- [Jsonnet](https://jsonnet.org/) assembles the Packer config.
-
-To build a Docker cluster:
-- Docker
-- [Go 1.11+](https://golang.org/dl/)
-- [Packer](https://packer.io/)
-
-## Docker cluster
-
-Since it requires no extra hardware and takes only about a minute to setup, 
-this is probably where you should begin.
-
-Install Docker, Packer, Jsonnet, and Go 1.11+.  To build the image, run:
-
-```bash
-./docker.sh
-```
-
-To launch the cluster, run:
-
-```bash
-docker network create --subnet 192.168.2.0/24 --gateway 192.168.2.1 hashinet
-for i in 1 2 3; do 
-  docker run --rm -d --net hashinet --ip 192.168.2.2$i --name hashinode$i \
-  -p 1909$i:9090 -p3850$i:8500 -p4646$i:4646 ncabatoff/hashinode:0.1;
-done
-```
-
-After a few seconds you should be able to connect to http://localhost:19091/targets
-to see the Prometheus view of the services coming up.
-
-Go to http://localhost:38501/ui to see the Consul UI and http://localhost:46461/ui 
-to see the Nomad UI.
-
-To kill the cluster, run
-```bash
-docker kill hashinode{1,2,3}
-```
-
 ## DNS and assigning hostnames
 
 *Note: Consul handles DNS queries to perform DNS-based service discovery, but 
@@ -81,6 +65,10 @@ to use DHCP to get their hostnames.  This means for each server, boot it up,
 get its MAC address, and put that into your DHCP server (typically your router)
 as a static DHCP entry with a fixed IP.  On subsequent boots it will set its
 hostname based on that DHCP entry.
+
+packer-arm.jsonnet doesn't care what hostnames are used, but it expects that the
+three core servers will be on 192.168.2.{51,52,53}.  To change that
+assumption edit the file and modify the prov_prometheus() call.
 
 ## Creating the image and writing it to the SD cards
 

@@ -1,4 +1,6 @@
 .idea
+.vagrant
+packages/
 packer-builder-arm-image
 pkgbuilder
 zpivariables.json

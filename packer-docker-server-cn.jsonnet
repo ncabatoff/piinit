@@ -1,7 +1,6 @@
 local provisioner = import 'provisioners.jsonnet';
 {
   "variables": {
-    coreips: "",
     packages: "./all/nomad-server.deb ./all/consul-server.deb",
   },
   "builders": [{
@@ -10,7 +9,7 @@ local provisioner = import 'provisioners.jsonnet';
     pull: false,
     commit: true,
     changes: [
-      "EXPOSE 9100 9090 8500 4646",
+      "EXPOSE 9100 8500 4646",
     ],
   }],
   "post-processors": [

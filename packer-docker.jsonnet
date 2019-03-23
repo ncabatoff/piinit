@@ -1,7 +1,6 @@
 local provisioner = import 'provisioners.jsonnet';
 {
   "variables": {
-    coreips: "",
     packages: "./amd64/consul.deb ./amd64/nomad.deb ./amd64/node_exporter.deb ./amd64/prometheus.deb",
   },
   "builders": [{

@@ -1,7 +1,6 @@
 local provisioner = import 'provisioners.jsonnet';
 {
   "variables": {
-    coreips: "",
   },
   "builders": [{
     type: "docker",
