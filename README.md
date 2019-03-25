@@ -78,10 +78,6 @@ three core servers will be on 192.168.2.{51,52,53}.  To change that
 assumption modify arm-run.sh and add a --tla-code-file argument to jsonnet
 as is done with the variables argument.
 
-## Creating the image and writing it to the SD cards
-
-Edit packer-arm.jsonnet if you want something other than Raspbian Stretch Lite.
-
 ## Build packages
 
 If you didn't run `vagrant up` to create a virtual cluster first, there is an
@@ -94,7 +90,7 @@ cd packages
 pkgbuilder
 ```
 
-### Setup
+### Setup Packer ARM env
 
 To install jsonnet and create the VM used for building your Pi OS image:
 
@@ -105,7 +101,7 @@ cd packer-builder-arm-image
 path/to/piinit/checkout/arm-setup.sh
 ```
 
-### Building
+### Build ARM OS images
 
 To create the OS image for your servers, run:
 
@@ -149,7 +145,7 @@ monitoring Pi Zero image, then derive the file for my core servers like this:
 jq -r '{consul_encrypt: .consul_encrypt}' < zpivariables.json > pivariables.json
 ```
 
-### Burning
+### Burning OS images to SD cards
 
 You should use [Etcher](https://www.balena.io/etcher/) to write the image to
 SD cards.  See `arm-burn.sh` for an example of how to invoke it non-interactively
@@ -165,7 +161,6 @@ from the command line.  Make sure to customize it according to your local setup.
   [go-getter](https://github.com/hashicorp/go-getter) and [nfpm](https://github.com/goreleaser/nfpm), from releases of
   - [Nomad](https://nomadproject.io)
   - [Consul](https://consul.io)
-  - [Terraform](https://terraform.io)
   - [Prometheus](https://prometheus.io)
   - [node_exporter](https://github.com/prometheus/node_exporter)
 
