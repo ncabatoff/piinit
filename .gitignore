@@ -1,10 +1,13 @@
 .idea
 .vagrant
 packages/
-packer-builder-arm-image
 pkgbuilder
+pivariables.json
 zpivariables.json
+prometheus.json
+prometheus.yml
 authorized_keys
-consul-client-pi.hcl
-consul-client-docker.hcl
+client.json
 packer*.json
+packer-docker-coreips.jsonnet
+packer-docker-variables.jsonnet

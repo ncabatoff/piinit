@@ -19,7 +19,7 @@ bind-interfaces
 EOF
 systemctl restart dnsmasq supervisor
 
-cat - /vagrant/docker-launch.sh > /etc/rc.local <<EOF
+cat - /vagrant/provision-docker-launch.sh > /etc/rc.local <<"EOF"
 #!/usr/bin/env bash
 supervisorctl stop nomad
 killall nomad

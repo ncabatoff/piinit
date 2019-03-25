@@ -1,10 +1,13 @@
-local provisioner = import 'provisioners.jsonnet';
-{
-  "variables": {
-  },
-  "builders": [{
+local lib = import 'packer.jsonnet';
+local defvars = {
+  consul_encrypt: "",
+};
+function(variables, coreips) {
+  variables: std.mergePatch(defvars, variables),
+  "sensitive-variables": ["consul_encrypt"],
+  builders: [{
     type: "docker",
-    image: "ncabatoff/hashinode:latest",
+    image: "piinit/hashinode:latest",
     pull: false,
     commit: true,
     changes: [
@@ -15,16 +18,17 @@ local provisioner = import 'provisioners.jsonnet';
   "post-processors": [
     [
       {
-        "type": "docker-tag",
-        "repository": "ncabatoff/hashinode-mon",
-        "tag": "latest",
+        type: "docker-tag",
+        repository: "piinit/hashinode-mon",
+        tag: "latest",
       },
     ],
   ],
   provisioners:
-    provisioner.prov_consulclient("/vagrant/consul-client-docker.hcl") +
-    provisioner.prov_prometheus_register() +
-    provisioner.prov_prometheus(["192.168.3.21", "192.168.3.22", "192.168.3.23"]) +
+    lib.prov_custompkgs("./packages/", ["all"]) +
+    lib.prov_aptinst(["./all/prometheus-register-consul.deb"]) +
+    lib.prov_consulclient(coreips) +
+    lib.prov_prometheus(coreips) +
       [
         {
           type: "shell",

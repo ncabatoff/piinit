@@ -1,3 +1,0 @@
-{
-  "packages": "./arm/nomad.deb ./arm/consul.deb ./armv7/node_exporter.deb ./all/consul-server.deb ./all/consul-static-hostid.deb ./all/nomad-server.deb"
-}

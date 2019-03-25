@@ -1,13 +1,12 @@
-local provisioner = import 'provisioners.jsonnet';
+local lib = import 'packer.jsonnet';
 local from = "/vagrant";
-{
-  variables: {
-    // home: "{{env `HOME`}}",
-    wifi_name: "",
-    wifi_password: "",
-    packages: "./arm/consul.deb",
-  },
-  "sensitive-variables": ["wifi_password"],
+local defvars = {
+  packages: "./arm/nomad.deb ./arm/consul.deb ./armv7/node_exporter.deb ./all/consul-server.deb ./all/consul-static-hostid.deb ./all/nomad-server.deb",
+  consul_encrypt: "",
+};
+function(variables, coreips=["192.168.2.51", "192.168.2.52", "192.168.2.53"]) {
+  "variables": std.mergePatch(defvars, variables),
+  "sensitive-variables": ["wifi_password", "consul_encrypt"],
   builders: [{
     "type": "arm-image",
     "iso_url" : "file:///vagrant/2018-11-13-raspbian-stretch-lite.img",
@@ -16,10 +15,15 @@ local from = "/vagrant";
     "last_partition_extra_size" : 1073741824,
   }],
   provisioners:
-    provisioner.prov_custompkgs("/vagrant/packages/", ["arm", "armv6", "armv7", "all"]) +
-    provisioner.prov_aptinst(["supervisor", "iproute2", "curl", "procps"]) +
-    provisioner.prov_aptinst(["{{user `packages`}}"]) +
-    provisioner.prov_consulclient("/vagrant/consul-client-pi.hcl") +
+    lib.prov_custompkgs("/vagrant/packages/", ["arm", "armv6", "armv7", "all"]) +
+    lib.prov_aptinst(["supervisor", "iproute2", "curl", "procps"]) +
+      [
+        {
+          "type": "shell",
+          "inline": [ "dpkg --add-architecture armel" ],
+        },
+      ] +
+    lib.prov_aptinst(["{{user `packages`}}"]) +
       [
         {
           "type": "shell",
@@ -45,6 +49,10 @@ local from = "/vagrant";
           ]
         },
       ] +
-    provisioner.prov_wifi(from) +
-    provisioner.prov_prometheus(["192.168.2.51", "192.168.2.52", "192.168.2.53"])
+    lib.prov_wifi() +
+    lib.prov_consulclient(coreips) +
+    ( if std.length(std.findSubstr('prometheus.deb', std.mergePatch(defvars, variables)['packages'])) > 0 then
+        lib.prov_prometheus(coreips)
+      else []
+    )
 }

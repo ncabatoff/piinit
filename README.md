@@ -31,19 +31,26 @@ docker images representing the core nomad/consul and prometheus servers.  It
 will also setup nomad in client mode on the virtual machine and configure DNS
 resolution to send queries for the .consul domain to the virtual cluster.
 
-To test that everything is running:
+To test that everything is running, go to:
 
-```bash
-vagrant ssh
-consul members
-nomad server members
-```
+- [prometheus ui](http://localhost:49090/targets)
+- [consul ui](http://localhost:48500/ui)
+- [nomad ui](http://localhost:44646/ui)
 
 Note that although the cluster will be restarted when the VM is rebooted, its
 state will be wiped.  This is by design, though it's easy enough to add volume
-mappings to docker-launch.sh if you'd rather the state persisted.
+mappings to provision-docker-launch.sh (and/or /etc/rc.local) if you'd rather 
+the state be persisted.
 
 # Real environment
+
+Summary of steps:
+0. Obtain ARM hardware
+1. Create DNS entries for your RPi MAC addrs on your router
+2. Build packages if you didn't run `vagrant up` above
+3. Setup Packer ARM env
+4. Build ARM OS images
+5. Burn OS images to SD card
 
 ## Hardware
 
@@ -68,18 +75,34 @@ hostname based on that DHCP entry.
 
 packer-arm.jsonnet doesn't care what hostnames are used, but it expects that the
 three core servers will be on 192.168.2.{51,52,53}.  To change that
-assumption edit the file and modify the prov_prometheus() call.
+assumption modify arm-run.sh and add a --tla-code-file argument to jsonnet
+as is done with the variables argument.
 
 ## Creating the image and writing it to the SD cards
 
 Edit packer-arm.jsonnet if you want something other than Raspbian Stretch Lite.
 
-### Setup
+## Build packages
 
-To create the VM used for building your Pi OS image, run:
+If you didn't run `vagrant up` to create a virtual cluster first, there is an
+extra step needed here:
 
 ```bash
-./setup.sh
+go get -u github.com/ncabatoff/pkgbuilder
+mkdir packages
+cd packages
+pkgbuilder
+```
+
+### Setup
+
+To install jsonnet and create the VM used for building your Pi OS image:
+
+```bash
+cd $GOPATH/src/github.com/ncabatoff
+git clone https://github.com/ncabatoff/packer-builder-arm-image
+cd packer-builder-arm-image
+path/to/piinit/checkout/arm-setup.sh
 ```
 
 ### Building
@@ -87,21 +110,49 @@ To create the VM used for building your Pi OS image, run:
 To create the OS image for your servers, run:
 
 ```bash
-./run.sh
+path/to/piinit/checkout/arm-run.sh
 ```
 
-Note that at the top of `packer.json` there are a bunch of variables.  You can
-edit the script to change those.  Alternatively, you can provide them in a 
-separate file, e.g.
+#### Customization
+
+Optionally, there are a few settings that can be customized via a json (or jsonnet) file:
+
+```json
+{
+  "consul_encrypt": "***",
+  "wifi_name": "your_ssid",
+  "wifi_password": "***",
+  "packages": "./armv6/prometheus.deb ./armv6/node_exporter.deb ./arm/consul.deb ./all/prometheus-register-consul.deb ./all/consul-static-hostid.deb"
+}
+```
+
+Then pass that as the sole argument to arm-run.sh, e.g.
 
 ```bash
-VARSFILE=pivariables.json ./run.sh
+path/to/piinit/checkout/arm-run.sh myvars.json
+```
+
+Note:
+- Only provide settings you wish to override.
+- If `wifi_name` is unspecified wifi won't be configured.  
+- If `consul_encrypt` is specified it is an error to omit consul.deb from the package list.
+- The default `packages` are suitable for building a core Consul/Nomad RPi server.
+
+In addition to the three core Pi servers, I have a Pi Zero which I use
+for monitoring via Prometheus.  I also run Terraform on it to schedule Nomad
+jobs.
+
+I use a file named zpivariables.json that looks like the above from which I build my
+monitoring Pi Zero image, then derive the file for my core servers like this:
+
+```
+jq -r '{consul_encrypt: .consul_encrypt}' < zpivariables.json > pivariables.json
 ```
 
 ### Burning
 
 You should use [Etcher](https://www.balena.io/etcher/) to write the image to
-SD cards.  See `burn.sh` for an example of how to invoke it non-interactively
+SD cards.  See `arm-burn.sh` for an example of how to invoke it non-interactively
 from the command line.  Make sure to customize it according to your local setup.
 
 ## How it works
@@ -117,30 +168,6 @@ from the command line.  Make sure to customize it according to your local setup.
   - [Terraform](https://terraform.io)
   - [Prometheus](https://prometheus.io)
   - [node_exporter](https://github.com/prometheus/node_exporter)
-
-## My setup
-
-In addition to the three core Pi servers, I have a Pi Zero which I use
-for monitoring via Prometheus.  I also run Terraform on it to schedule Nomad
-jobs.
-
-So I have `pivariables.json` which contains:
-
-```
-{
-  "packages": "./arm/nomad.deb ./arm/consul.deb ./armv7/node_exporter.deb ./all/consul-server.deb ./all/consul-static-hostid.deb ./all/nomad-server.deb"
-}
-```
-
-And also `zpivariables.json` which contains:
-
-```
-{
-  "wifi_name": "***",
-  "wifi_password": "***",
-  "packages": "./arm/terraform.deb ./arm/consul.deb ./armv6/prometheus.deb ./armv6/node_exporter.deb ./all/consul-static-host-id.deb  ./all/consul-dnsmasq.deb"
-}
-```
 
 ## Motivation
 

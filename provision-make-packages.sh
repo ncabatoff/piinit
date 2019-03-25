@@ -11,7 +11,7 @@ GO111MODULE=on go install
 
 mkdir -p /vagrant/packages
 cd /vagrant/packages
-pkgbuilder -arches amd64,all
+pkgbuilder
 
 
 

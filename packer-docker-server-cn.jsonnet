@@ -1,11 +1,13 @@
-local provisioner = import 'provisioners.jsonnet';
-{
-  "variables": {
-    packages: "./all/nomad-server.deb ./all/consul-server.deb",
-  },
-  "builders": [{
+local lib = import 'packer.jsonnet';
+local defvars = {
+  consul_encrypt: "",
+};
+function(variables, coreips) {
+  variables: std.mergePatch(defvars, variables),
+  "sensitive-variables": ["consul_encrypt"],
+  builders: [{
     type: "docker",
-    image: "ncabatoff/hashinode:latest",
+    image: "piinit/hashinode:latest",
     pull: false,
     commit: true,
     changes: [
@@ -15,16 +17,16 @@ local provisioner = import 'provisioners.jsonnet';
   "post-processors": [
     [
       {
-        "type": "docker-tag",
-        "repository": "ncabatoff/hashinode-nc",
-        "tag": "latest"
+        type: "docker-tag",
+        repository: "piinit/hashinode-cn",
+        tag: "latest"
       },
     ],
   ],
   provisioners:
-    provisioner.prov_custompkgs("./packages/", ["amd64", "all"]) +
-    provisioner.prov_aptinst(["{{user `packages`}}"]) +
-    provisioner.prov_consulclient("/vagrant/consul-client-docker.hcl") +
+    lib.prov_custompkgs("./packages/", ["all"]) +
+    lib.prov_aptinst(["./all/nomad-server.deb ./all/consul-server.deb"]) +
+    lib.prov_consulclient(coreips) +
       [
         {
           type: "shell",

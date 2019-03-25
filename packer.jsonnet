@@ -1,22 +1,42 @@
 {
-  prov_consulclient(hcl)::
+  // note that prov_consulclient must be called *after* packages are installed to
+  // ensure that the consul user exists.  It's okay to call this even if not
+  // planning to use consul, but to prevent leaving the encryption key around
+  // needlessly it's designed to fail if the consul user doesn't exist but
+  // the encryption key (user variable `consul_encrypt`) is nonempty.
+  prov_consulclient(coreips)::
       [
         {
-          "type": "file",
-          "source": hcl,
-          "destination": "/opt/consul/config/client.hcl"
+          type: "shell-local",
+          inline: [
+            "cat - > client.json <<EOF\n" + std.manifestJsonEx(
+            {
+                encrypt: "{{user `consul_encrypt`}}",
+                retry_join: coreips,
+            }, "  ") + "\nEOF\n"
+          ],
         },
         {
-          "type": "shell",
-          "inline": ["chown consul.consul /opt/consul/config/client.hcl"]
+          type: "shell",
+          inline: ["mkdir -p /opt/consul/config/"]
+        },
+        {
+          type: "file",
+          generated: true,
+          source: "client.json",
+          destination: "/opt/consul/config/client.json",
+        },
+        {
+          type: "shell",
+          inline: ["if [ -n '{{user `consul_encrypt`}}' ]; then chown consul.consul /opt/consul/config/client.json; fi"]
         },
       ],
 
-  prov_wifi(from)::
+  prov_wifi()::
       [
         {
-          "type": "shell",
-          "inline": [
+          type: "shell",
+          inline: [
             "test -z \"{{user `wifi_password`}}\" || wpa_passphrase \"{{user `wifi_name`}}\" \"{{user `wifi_password`}}\" | sed -e 's/#.*$//' -e '/^$/d' >> /etc/wpa_supplicant/wpa_supplicant.conf"
           ]
         },
@@ -32,27 +52,14 @@
         },
       ],
 
-//  prov_makecustompkgs()::
-//      [
-//        {
-//          type: "shell-local",
-//          inline: [
-//            "test -d pkgbuilder || git clone https://github.com/ncabatoff/pkgbuilder",
-//            "cd pkgbuilder",
-//            "go get github.com/hashicorp/go-getter/cmd/go-getter",
-//            "make packages",
-//          ],
-//        },
-//      ],
-
   prov_custompkgs(from, arches)::
       [{type: "file", generated: true, source: from+a, destination: a} for a in arches],
 
   prov_prometheus(hosts)::
       [
         {
-          "type": "shell-local",
-          "inline": [
+          type: "shell-local",
+          inline: [
             "cat - > prometheus.yml <<EOF\n" + std.manifestYamlDoc(
             {
               global: {
@@ -153,42 +160,9 @@
           source: "prometheus.yml",
           destination: "/opt/prometheus/config/",
         },
-      ],
-
-  prov_prometheus_register()::
-      [
         {
-          "type": "shell-local",
-          "inline": [
-            "cat - > prometheus.json <<EOF\n" + std.manifestJsonEx(
-            {
-                "service": {
-                  "id": "prometheus",   // TODO make unique
-                  "name": "prometheus",
-                  "tags": ["primary"],  // TODO make prom-discoverable
-                  "port": 9090,
-                  "enable_tag_override": false,
-                  "checks": [
-                    {
-                        "id": "api",
-                        "name": "HTTP API on port 9090",
-                        "http": "http://localhost:9090/metrics",
-                        // "tls_skip_verify": true,
-                        "method": "GET",
-                        // "header": {"x-foo":["bar", "baz"]},
-                        "interval": "10s",
-                        "timeout": "1s"
-                    }
-                  ],
-                }
-            }, "  ") + "\nEOF\n"
-          ]
-        },
-        {
-          type: "file",
-          generated: true,
-          source: "prometheus.json",
-          destination: "/opt/consul/config/prometheus.json",
+          type: "shell",
+          inline: ["chown prometheus.prometheus /opt/prometheus/config/prometheus.yml"],
         },
       ],
 }

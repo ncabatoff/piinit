@@ -1,9 +1,7 @@
-local provisioner = import 'provisioners.jsonnet';
+local lib = import 'packer.jsonnet';
+local packages = "./amd64/consul.deb ./amd64/nomad.deb ./amd64/node_exporter.deb ./amd64/prometheus.deb";
 {
-  "variables": {
-    packages: "./amd64/consul.deb ./amd64/nomad.deb ./amd64/node_exporter.deb ./amd64/prometheus.deb",
-  },
-  "builders": [{
+  builders: [{
     type: "docker",
     image: "debian:stretch-slim",
     commit: true,
@@ -15,14 +13,14 @@ local provisioner = import 'provisioners.jsonnet';
   "post-processors": [
     [
       {
-        "type": "docker-tag",
-        "repository": "ncabatoff/hashinode",
-        "tag": "latest"
+        type: "docker-tag",
+        repository: "piinit/hashinode",
+        tag: "latest"
       },
     ],
   ],
   provisioners:
-    provisioner.prov_custompkgs("./packages/", ["amd64", "all"]) +
-    provisioner.prov_aptinst(["supervisor", "iproute2", "curl", "procps", "dnsutils", "vim-tiny", "net-tools"]) +
-    provisioner.prov_aptinst(["{{user `packages`}}"])
+    lib.prov_custompkgs("./packages/", ["amd64", "all"]) +
+    lib.prov_aptinst(["supervisor iproute2 curl procps dnsutils vim-tiny net-tools"]) +
+    lib.prov_aptinst([packages])
 }
