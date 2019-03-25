@@ -101,6 +101,10 @@ cd packer-builder-arm-image
 path/to/piinit/checkout/arm-setup.sh
 ```
 
+_Note: You may prefer to use the upstream repo I forked, https://github.com/solo-io/packer-builder-arm-image.
+Be aware however that they seem to be using a bot that automatically merges PRs that merge cleanly, without 
+doing any review.  This makes me uncomfortable enough that I'm not recommending it._
+
 ### Build ARM OS images
 
 To create the OS image for your servers, run:
