@@ -1,0 +1,74 @@
+{
+   "builders": [
+      {
+         "iso_checksum": "b9e22d7592c6936e4b0adadc9c9dbf7b4868cbfc26ff68a329e32f4af54fed70",
+         "iso_checksum_type": "sha256",
+         "iso_url": "file:///vagrant/2018-11-13-raspbian-stretch-lite.img",
+         "last_partition_extra_size": 1073741824,
+         "type": "arm-image"
+      }
+   ],
+   "provisioners": [
+      {
+         "destination": "arm",
+         "generated": true,
+         "source": "/vagrant/packages/arm",
+         "type": "file"
+      },
+      {
+         "destination": "armv7",
+         "generated": true,
+         "source": "/vagrant/packages/armv7",
+         "type": "file"
+      },
+      {
+         "destination": "all",
+         "generated": true,
+         "source": "/vagrant/packages/all",
+         "type": "file"
+      },
+      {
+         "inline": [
+            "apt-get update -y",
+            "DEBIAN_FRONTEND=noninteractive apt-get install -y supervisor iproute2 curl procps"
+         ],
+         "type": "shell"
+      },
+      {
+         "inline": [
+            "dpkg --add-architecture armel"
+         ],
+         "type": "shell"
+      },
+      {
+         "inline": [
+            "apt-get update -y",
+            "DEBIAN_FRONTEND=noninteractive apt-get install -y ./arm/consul.deb ./arm/nomad.deb ./armv7/node_exporter.deb  ./all/consul-server.deb ./all/consul-local.deb ./all/consul-static-hostid.deb ./all/nomad-server.deb"
+         ],
+         "type": "shell"
+      },
+      {
+         "inline": [
+            "echo  >> /etc/ssh/ssh_config",
+            "sed '/PasswordAuthentication/d' -i /etc/ssh/ssh_config",
+            "echo 'PasswordAuthentication no' >> /etc/ssh/ssh_config",
+            "echo localhost > /etc/hostname",
+            "touch /boot/ssh",
+            "mkdir -p -m 0700 /home/pi/.ssh"
+         ],
+         "type": "shell"
+      },
+      {
+         "destination": "/home/pi/.ssh/authorized_keys",
+         "source": "/vagrant/authorized_keys",
+         "type": "file"
+      },
+      {
+         "inline": [
+            "chmod 0600 /home/pi/.ssh/authorized_keys",
+            "chown -R pi.pi /home/pi/.ssh"
+         ],
+         "type": "shell"
+      }
+   ]
+}

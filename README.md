@@ -73,28 +73,30 @@ get its MAC address, and put that into your DHCP server (typically your router)
 as a static DHCP entry with a fixed IP.  On subsequent boots it will set its
 hostname based on that DHCP entry.
 
-packer-arm.jsonnet doesn't care what hostnames are used, but it expects that the
-three core servers will be on 192.168.2.{51,52,53}.  To change that
-assumption modify arm-run.sh and add a --tla-code-file argument to jsonnet
-as is done with the variables argument.
-
 ## Build packages
 
-If you didn't run `vagrant up` to create a virtual cluster first, there is an
-extra step needed here:
-
 ```bash
-go get -u github.com/ncabatoff/pkgbuilder
-mkdir packages
-cd packages
-pkgbuilder
+make packages
+cd packages && ../pkgbuilder -arches all -config '{
+  "ConsulSerfEncrypt": "S/OHRE9Nc4VmdGtJr11vBA==", 
+  "CoreServers": ["192.168.2.51", "192.168.2.52", "192.168.2.53"],
+  "WifiSsid": "YourSSID",
+  "WifiPsk": "b71288ba03c9197d6afda9f1f67f913c12f41fb9e3585da18c11e68099355e62"
+}'
 ```
+
+Replace ConsulSerfEncrypt and CoreServers with your local values.
+
+WifiSsid and WifiPsk are only needed if any of your systems need WiFi, in which 
+case you should include the package wifi-local in their packer config.  Use the
+wpa-supplicant command line tool to translate your WiFi password into PSK.
 
 ### Setup Packer ARM env
 
-To install jsonnet and create the VM used for building your Pi OS image:
+To create the VM used for building your Pi OS image:
 
 ```bash
+mkdir -p $GOPATH/src/github.com/ncabatoff
 cd $GOPATH/src/github.com/ncabatoff
 git clone https://github.com/ncabatoff/packer-builder-arm-image
 cd packer-builder-arm-image
@@ -115,39 +117,20 @@ path/to/piinit/checkout/arm-run.sh
 
 #### Customization
 
-Optionally, there are a few settings that can be customized via a json (or jsonnet) file:
+By default arm-run.sh will build an image based on packer-arm.json, which will serve
+for your core Consul/Nomad servers.  
 
-```json
-{
-  "consul_encrypt": "***",
-  "wifi_name": "your_ssid",
-  "wifi_password": "***",
-  "packages": "./armv6/prometheus.deb ./armv6/node_exporter.deb ./arm/consul.deb ./all/prometheus-register-consul.deb ./all/consul-static-hostid.deb"
-}
-```
+Given a single argument arm-run.sh will expect a .json file to give packer.  
+Use packer-arm-mon.json to build a Prometheus server image that can be used on 
+a Raspberry Pi Zero to monitor your cluster.  It includes a Consul client to 
+discover all your services.
 
-Then pass that as the sole argument to arm-run.sh, e.g.
+Given two arguments arm-run.sh will expect the first to be a .json file to 
+overwrite, and the second to be a .jsonnet file used to build the former.
+It will then give the .json file to packer to build an OS image with.
 
-```bash
-path/to/piinit/checkout/arm-run.sh myvars.json
-```
-
-Note:
-- Only provide settings you wish to override.
-- If `wifi_name` is unspecified wifi won't be configured.  
-- If `consul_encrypt` is specified it is an error to omit consul.deb from the package list.
-- The default `packages` are suitable for building a core Consul/Nomad RPi server.
-
-In addition to the three core Pi servers, I have a Pi Zero which I use
-for monitoring via Prometheus.  I also run Terraform on it to schedule Nomad
-jobs.
-
-I use a file named zpivariables.json that looks like the above from which I build my
-monitoring Pi Zero image, then derive the file for my core servers like this:
-
-```
-jq -r '{consul_encrypt: .consul_encrypt}' < zpivariables.json > pivariables.json
-```
+You need not use Jsonnet to build your own packer json files, but that's what I
+use.
 
 ### Burning OS images to SD cards
 
@@ -155,20 +138,21 @@ You should use [Etcher](https://www.balena.io/etcher/) to write the image to
 SD cards.  See `arm-burn.sh` for an example of how to invoke it non-interactively
 from the command line.  Make sure to customize it according to your local setup.
 
-## How it works
+## Notes
+
+### How it works
 
 - [Packer](https://packer.io/) is used to create the OS images using
   - [packer-builder-arm-image](https://github.com/solo-io/packer-builder-arm-image) for ARM Pi images
   - built-in [Docker builder](https://www.packer.io/docs/builders/docker.html) for AMD64 Docker images
-- [Jsonnet](https://jsonnet.org/) assembles the Packer config.
-- [pkgbuilder](https://github.com/ncabatoff/pkgbuilder) creates custom .deb files using
+- cmd/pkgbuilder creates custom .deb files using
   [go-getter](https://github.com/hashicorp/go-getter) and [nfpm](https://github.com/goreleaser/nfpm), from releases of
   - [Nomad](https://nomadproject.io)
   - [Consul](https://consul.io)
   - [Prometheus](https://prometheus.io)
   - [node_exporter](https://github.com/prometheus/node_exporter)
 
-## Motivation
+### Motivation
 
 Many people have home servers, e.g. to serve media files.  But what about
 redundancy?  You could setup a second server, but then how do you manage failover?
@@ -190,16 +174,43 @@ avoid split brain inconsistency.  For a couple of hundred dollars you can buy
 3 Raspberry Pis (or similar ARM-based single board computers) to run Nomad
 and Consul.
 
-## Dedicated cluster
+### Dedicated cluster
 
 You could certainly run other software on these servers as well.  For the volume
 of data you're likely to have on your home setup, Consul and Nomad need very few
-resources.  Personally I use a couple of NUCs to run everything, because I'd rather
-have the core Consul/Nomad cluster as reliable and predictable as possible.
+resources.  Personally I use a couple of NUCs to run everything else, because I'd 
+rather have the core Consul/Nomad cluster as reliable and predictable as possible.
 
-## TLS
+### TLS
 
 Eventually I plan to add TLS (and probably Vault) to the mix.  For now the goal
 is to get the simplest thing possible running smoothly.
+
+### MacOS
+
+To use Consul service discovery on your local MacOS machine:
+
+- create a file /etc/resolver/consul containing the single line
+```
+nameserver 127.0.0.1
+```
+- brew install dnsmasq
+- add these lines to /usr/local/etc/dnsmasq.conf:
+```
+server=/consul/192.168.2.51#8600
+server=/consul/192.168.2.52#8600
+server=/consul/192.168.2.53#8600
+```
+- sudo brew services start dnsmasq
+
+The HashiCorp recommendation would be to run a local Consul agent, but the above
+is sufficient and if I can avoid having another moving part to break I will.
+
+NOTE: The Go resolver doesn't yet work properly on MacOS, so some Go binaries
+(e.g. terraform) will not look in /etc/resolver/ to perform DNS name resolution.
+A possible workaround if you want to run Terraform is to run it via docker so
+that it effectively runs under Linux instead of MacOS, but when I tried this I 
+ran into a conflict with my local network (192.268.2.0/24)
+being used for another purpose in the Docker Desktop Hyperkit VM.  
 
 

@@ -1,10 +1,5 @@
 local lib = import 'packer.jsonnet';
-local defvars = {
-  consul_encrypt: "",
-};
-function(variables, coreips) {
-  variables: std.mergePatch(defvars, variables),
-  "sensitive-variables": ["consul_encrypt"],
+{
   builders: [{
     type: "docker",
     image: "piinit/hashinode:latest",
@@ -25,8 +20,7 @@ function(variables, coreips) {
   ],
   provisioners:
     lib.prov_custompkgs("./packages/", ["all"]) +
-    lib.prov_aptinst(["./all/nomad-server.deb ./all/consul-server.deb"]) +
-    lib.prov_consulclient(coreips) +
+    lib.prov_aptinst(["./all/nomad-server.deb ./all/consul-server.deb ./all/consul-local.deb"]) +
       [
         {
           type: "shell",

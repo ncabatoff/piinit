@@ -2,12 +2,3 @@
 .vagrant
 packages/
 pkgbuilder
-pivariables.json
-zpivariables.json
-prometheus.json
-prometheus.yml
-authorized_keys
-client.json
-packer*.json
-packer-docker-coreips.jsonnet
-packer-docker-variables.jsonnet

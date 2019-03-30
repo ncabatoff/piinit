@@ -1,5 +1,4 @@
 local lib = import 'packer.jsonnet';
-local packages = "./amd64/consul.deb ./amd64/nomad.deb ./amd64/node_exporter.deb ./amd64/prometheus.deb";
 {
   builders: [{
     type: "docker",
@@ -22,5 +21,5 @@ local packages = "./amd64/consul.deb ./amd64/nomad.deb ./amd64/node_exporter.deb
   provisioners:
     lib.prov_custompkgs("./packages/", ["amd64", "all"]) +
     lib.prov_aptinst(["supervisor iproute2 curl procps dnsutils vim-tiny net-tools"]) +
-    lib.prov_aptinst([packages])
+    lib.prov_aptinst(["./amd64/consul.deb ./amd64/nomad.deb ./amd64/node_exporter.deb ./amd64/prometheus.deb"])
 }

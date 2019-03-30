@@ -1,0 +1,46 @@
+{
+   "builders": [
+      {
+         "changes": [
+            "EXPOSE 9100 8500 4646"
+         ],
+         "commit": true,
+         "image": "piinit/hashinode:latest",
+         "pull": false,
+         "type": "docker"
+      }
+   ],
+   "post-processors": [
+      [
+         {
+            "repository": "piinit/hashinode-cn",
+            "tag": "latest",
+            "type": "docker-tag"
+         }
+      ]
+   ],
+   "provisioners": [
+      {
+         "destination": "all",
+         "generated": true,
+         "source": "./packages/all",
+         "type": "file"
+      },
+      {
+         "inline": [
+            "apt-get update -y",
+            "DEBIAN_FRONTEND=noninteractive apt-get install -y ./all/nomad-server.deb ./all/consul-server.deb ./all/consul-local.deb"
+         ],
+         "type": "shell"
+      },
+      {
+         "inline": [
+            "supervisorctl stop consul",
+            "rm -rf /opt/consul/data/*",
+            "supervisorctl stop nomad",
+            "rm -rf /opt/nomad/data/*"
+         ],
+         "type": "shell"
+      }
+   ]
+}

@@ -11,7 +11,8 @@ GO111MODULE=on go install
 
 mkdir -p /vagrant/packages
 cd /vagrant/packages
-pkgbuilder
+encrypt=`dd if=/dev/urandom bs=16 count=1 2>/dev/null | base64`
+pkgbuilder -config '{"ConsulSerfEncrypt": "'"$encrypt"'", "CoreServers": ["192.168.2.51", "192.168.2.52", "192.168.2.53"]}'
 
 
 

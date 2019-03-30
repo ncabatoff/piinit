@@ -24,7 +24,7 @@ sudo apt-get install -y \
   echo "export GOROOT=/usr/lib/go-${goVersion}"
   echo 'export GOPATH=$HOME/work'
   echo 'export PATH=$PATH:$GOROOT/bin:$GOPATH/bin'
-  echo 'export NETWORK=192.168.3'
+  echo 'export NETWORK=192.168.2'
 ) > /home/vagrant/.piinit.profile
 echo ". /home/vagrant/.piinit.profile" >> /home/vagrant/.profile
 . /home/vagrant/.piinit.profile

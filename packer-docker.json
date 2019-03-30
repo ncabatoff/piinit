@@ -1,0 +1,48 @@
+{
+   "builders": [
+      {
+         "changes": [
+            "ENTRYPOINT /usr/bin/supervisord --nodaemon",
+            "EXPOSE 9100"
+         ],
+         "commit": true,
+         "image": "debian:stretch-slim",
+         "type": "docker"
+      }
+   ],
+   "post-processors": [
+      [
+         {
+            "repository": "piinit/hashinode",
+            "tag": "latest",
+            "type": "docker-tag"
+         }
+      ]
+   ],
+   "provisioners": [
+      {
+         "destination": "amd64",
+         "generated": true,
+         "source": "./packages/amd64",
+         "type": "file"
+      },
+      {
+         "destination": "all",
+         "generated": true,
+         "source": "./packages/all",
+         "type": "file"
+      },
+      {
+         "inline": [
+            "apt-get update -y; DEBIAN_FRONTEND=noninteractive apt-get install -y supervisor iproute2 curl procps dnsutils vim-tiny net-tools"
+         ],
+         "type": "shell"
+      },
+      {
+         "inline": [
+            "apt-get update -y; DEBIAN_FRONTEND=noninteractive apt-get install -y ./amd64/consul.deb ./amd64/nomad.deb ./amd64/node_exporter.deb ./amd64/prometheus.deb"
+         ],
+         "type": "shell"
+      }
+   ]
+}
