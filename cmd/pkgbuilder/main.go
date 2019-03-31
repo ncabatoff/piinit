@@ -285,6 +285,10 @@ scrape_configs:
     - __meta_consul_tags
   - source_labels: 
     - __meta_consul_service
+    # Consul won't let us register names with underscores, but dashboards may
+    # assume the name node_exporter.  Fix on ingestion.
+    regex: node-exporter
+    replacement: node_exporter
     target_label: job
 
 - consul_sd_configs: 
@@ -336,12 +340,26 @@ scrape_configs:
 	{
 		Options{
 			name:              "node_exporter",
-			user:              "node_exporter",
+			user:              "root",
 			version:           "0.17.0",
 			upstreamURLFormat: "https://github.com/prometheus/node_exporter/releases/download/v%s/node_exporter-%s.linux-%s.tar.gz",
 			isDaemon:          true,
+			args:              "--collector.supervisord --collector.wifi --no-collector.nfs --no-collector.nfsd",
 			argConf:           "--collector.textfile.directory",
 		}, []string{"armv6", "armv7", "amd64"},
+	},
+
+	{
+		Options{
+			name:      "node_exporter-supervisord",
+			configDir: "/etc/supervisor/conf.d",
+			rawConfigs: map[string]string{
+				"node_exporter_supervisor.conf": `
+[inet_http_server]
+port = 127.0.0.1:9001
+`,
+			},
+		}, []string{"all"},
 	},
 
 	{

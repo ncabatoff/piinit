@@ -10,6 +10,7 @@ local from = "/vagrant";
        "./arm/consul.deb",
        "./arm/nomad.deb",
        "./armv7/node_exporter.deb ",
+       "./all/node_exporter-supervisord.deb",
        "./all/consul-server.deb",
        "./all/consul-local.deb",
        "./all/consul-static-hostid.deb",
