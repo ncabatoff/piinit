@@ -141,8 +141,12 @@ telemetry {
 			depends:   []string{"nomad"},
 			configDir: "/opt/nomad/config",
 			rawConfigs: map[string]string{
-				"client.hcl": `client {
+				"client.hcl": `
+client {
   enabled = true
+  options {
+    "docker.privileged.enabled" = true
+  }
 }
 consul {
   address = "http://localhost:8500"
