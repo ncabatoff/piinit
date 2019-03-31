@@ -294,6 +294,15 @@ scrape_configs:
 {{- range .CoreServers }}
     - {{ . }}:4646
 {{- end }}
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: 'nomad_raft_replication_(appendEntries_rpc|appendEntries_logs|heartbeat)_([^:]+:\d+)(_sum|_count)?'
+    target_label: peer_instance
+    replacement: '${2}'
+  - source_labels: [__name__]
+    regex: 'nomad_raft_replication_(appendEntries_rpc|appendEntries_logs|heartbeat)_([^:]+:\d+)(_sum|_count)?'
+    target_label: __name__
+    replacement: 'nomad_raft_replication_${1}${3}'
 
 - job_name: consul-services
   consul_sd_configs: 
