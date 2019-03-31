@@ -14,7 +14,7 @@ test -n ${NETWORK}
 sed -i -E  "s/127\.0\.1\.1[ 	]*(ubuntu-.*)/$NETWORK.1 \1/" /etc/hosts
 
 apt-get install -y dnsmasq supervisor
-apt-get install -y /vagrant/packages/amd64/{terraform,nomad,consul}.deb /vagrant/packages/all/nomad-client.deb /vagrant/packages/all/consul-local.deb
+dpkg -i /vagrant/packages/amd64/{terraform,nomad,consul}.deb /home/vagrant/packages/all/nomad-client.deb /home/vagrant/packages/all/consul-local.deb /home/vagrant/packages/all/consul-client.deb
 cat - > /etc/dnsmasq.d/10-consul <<EOF
 server=/consul/192.168.2.51#8600
 server=/consul/192.168.2.52#8600

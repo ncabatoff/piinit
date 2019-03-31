@@ -20,7 +20,7 @@ local lib = import 'packer.jsonnet';
   ],
   provisioners:
     lib.prov_custompkgs("./packages/", ["all"]) +
-    lib.prov_aptinst(["./all/nomad-server.deb ./all/consul-server.deb ./all/consul-local.deb"]) +
+    lib.prov_aptinst(["./all/nomad-server.deb ./all/consul-server.deb ./all/consul-local.deb ./all/node_exporter-supervisord.deb ./all/process-exporter-config.deb"]) +
       [
         {
           type: "shell",

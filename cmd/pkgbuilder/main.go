@@ -136,6 +136,26 @@ telemetry {
 	},
 
 	{
+		// Register the consul agent as a "service" purely so that
+		// Prometheus can discover all agents and scrape them.
+		Options{
+			name:      "consul-client",
+			depends:   []string{"consul"},
+			configDir: "/opt/consul/config",
+			rawConfigs: map[string]string{
+				"consul-client-service.json": `{
+  "service": {
+    "id": "consul-client",
+    "name": "consul-client",
+    "port": 8500
+  }
+}
+`,
+			},
+		}, []string{"all"},
+	},
+
+	{
 		Options{
 			name:      "nomad-client",
 			depends:   []string{"nomad"},
@@ -275,27 +295,30 @@ scrape_configs:
     - {{ . }}:4646
 {{- end }}
 
-- consul_sd_configs: 
+- job_name: consul-services
+  consul_sd_configs: 
   - server: localhost:8500
-  job_name: consul-services
   relabel_configs: 
   - action: keep
     regex: .*,prom,.*
     source_labels: 
     - __meta_consul_tags
-  - source_labels: 
+  - source_labels:
     - __meta_consul_service
+    target_label: job
+  - source_labels:
+    - __meta_consul_service
+    target_label: job
     # Consul won't let us register names with underscores, but dashboards may
     # assume the name node_exporter.  Fix on ingestion.
     regex: node-exporter
     replacement: node_exporter
-    target_label: job
 
-- consul_sd_configs: 
+- job_name: nomad-clients
+  consul_sd_configs: 
   - server: localhost:8500
     services: 
     - nomad-client
-  job_name: nomad-clients
   metrics_path: /v1/metrics
   params: 
     format: 
@@ -305,6 +328,16 @@ scrape_configs:
     regex: (.*)http(.*)
     source_labels: 
     - __meta_consul_tags
+
+- job_name: consul-clients
+  consul_sd_configs: 
+  - server: localhost:8500
+    services: 
+    - consul-client
+  metrics_path: /v1/agent/metrics
+  params: 
+    format: 
+    - prometheus
 `,
 			},
 		}, []string{"all"},

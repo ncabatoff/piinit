@@ -12,6 +12,7 @@ local from = "/vagrant";
        "./armv6/node_exporter.deb ",
        "./all/node_exporter-supervisord.deb",
        "./all/consul-local.deb",
+       "./all/consul-client.deb",
        "./all/consul-static-hostid.deb",
        "./all/prometheus-register-consul.deb",
        "./all/prometheus-local.deb",
