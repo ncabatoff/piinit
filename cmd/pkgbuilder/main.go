@@ -208,8 +208,9 @@ consul {
 			rawConfigs: map[string]string{
 				"common.hcl": `
 telemetry {
- disable_hostname = true
- prometheus_metrics = true
+  disable_hostname = true
+  prometheus_metrics = true
+  publish_allocation_metrics = true
 }
 disable_update_check = true
 log_level = "INFO"
@@ -261,6 +262,15 @@ scrape_configs:
     - localhost:9256
 {{- range .CoreServers }}
     - {{ . }}:9256
+{{- end }}
+
+- job_name: raspberrypi_exporter
+  metrics_path: /metrics/raspberrypi_exporter
+  static_configs: 
+  - targets: 
+    - localhost:9661
+{{- range .CoreServers }}
+    - {{ . }}:9100
 {{- end }}
 
 - job_name: consul-servers
@@ -483,6 +493,55 @@ process_names:
 			},
 		}, []string{"all"},
 	},
+
+	{
+		Options{
+			name: "script-exporter",
+			// We need root to run raspberrypi_exporter.  If we get other scripts
+			// that need less privs maybe we'll put them under a different parent.
+			user:              "root",
+			version:           "0.1.3",
+			upstreamURLFormat: "https://github.com/ncabatoff/script-exporter/releases/download/v%s/script-exporter_%s_linux_%s.tar.gz",
+			isDaemon:          true,
+			argConf:           "-script.path",
+		}, []string{"armv6", "amd64"},
+	},
+
+	{
+		Options{
+			name:      "script-exporter-register-consul",
+			configDir: "/opt/consul/config",
+			rawConfigs: map[string]string{
+				"script-exporter.json": `{
+	"service": {
+	  "id": "script-exporter",
+	  "name": "script-exporter",
+      "tags": ["prom"],
+	  "port": 9661,
+	  "checks": [
+		{
+		  "id": "api",
+		  "name": "HTTP API on port 9661",
+		  "http": "http://localhost:9661/metrics",
+		  "method": "GET",
+		  "interval": "10s",
+		  "timeout": "1s"
+		}
+	  ]
+	}
+}
+`,
+			},
+		}, []string{"all"},
+	},
+
+	{
+		Options{
+			name:           "raspberrypi_exporter",
+			upstreamScript: "https://raw.githubusercontent.com/ncabatoff/raspberrypi_exporter/master/raspberrypi_exporter",
+			binDir:         "/opt/script-exporter/config",
+		}, []string{"all"},
+	},
 }
 
 func buildOrDie(o Options, arches []string, cfg map[string]interface{}) {
@@ -509,6 +568,8 @@ type (
 		arch string
 		// template with placeholders for version (twice) and arch
 		upstreamURLFormat string
+		// path to file to write to binpath
+		upstreamScript string
 		// if true, create user named after package, and write start/stop scripts
 		isDaemon bool
 		// for daemons, user to create
@@ -526,8 +587,11 @@ type (
 		// map from basename to contents that should be written to configDir
 		rawConfigs map[string]string
 		// packages depended on
-		depends   []string
+		depends []string
+		// directory rawConfigs get placed in
 		configDir string
+		// optional overwrite for default binpath of /opt/$pkgname/bin
+		binDir string
 	}
 
 	builder struct {
@@ -561,7 +625,11 @@ func (o Options) logdir() string {
 }
 
 func (o Options) binpath() string {
-	return fmt.Sprintf("%s/bin/%s", o.basedir(), o.name)
+	if o.binDir != "" {
+		return fmt.Sprintf("%s/%s", o.binDir, o.name)
+	} else {
+		return fmt.Sprintf("%s/bin/%s", o.basedir(), o.name)
+	}
 }
 
 func (o Options) command() string {
@@ -698,7 +766,16 @@ func (b *builder) writeScripts() nfpm.Scripts {
 }
 
 func (o Options) getURL() string {
-	return fmt.Sprintf(o.upstreamURLFormat, o.version, o.version, o.arch)
+	if o.upstreamScript != "" {
+		if o.upstreamURLFormat != "" {
+			log.Fatalf("Bad package spec %q:specify both upstreamURLFormat and upstreamScript", o.name)
+		}
+		return o.upstreamScript
+	}
+	if o.upstreamURLFormat != "" {
+		return fmt.Sprintf(o.upstreamURLFormat, o.version, o.version, o.arch)
+	}
+	return ""
 }
 
 func (b *builder) getBinary() string {
@@ -722,24 +799,35 @@ func (b *builder) getBinary() string {
 		log.Fatalf("error fetching %s: %v", url, err)
 	}
 
-	fis, err := ioutil.ReadDir(dldir)
-	if err != nil {
-		log.Fatalf("error reading dir %s: %v", dldir, err)
-	}
+	var source os.FileInfo
 
-	// We support either a single file with arbitrary name, or a single directory
-	// containing 1+ files of which one is named after the project.
-	if len(fis) != 1 {
-		var fnames []string
-		for _, fi := range fis {
-			fnames = append(fnames, fi.Name())
+	{
+		fis, err := ioutil.ReadDir(dldir)
+		if err != nil {
+			log.Fatalf("error reading dir %s: %v", dldir, err)
 		}
-		log.Fatalf("expected exactly one file in %s, but found: %v", dldir, fnames)
+
+		// We support either a single file with arbitrary name, or a single directory
+		// containing 1+ files of which one is named after the project.
+		if len(fis) == 1 {
+			source = fis[0]
+		} else {
+			var fnames []string
+			for _, fi := range fis {
+				fnames = append(fnames, fi.Name())
+				if fi.Name() == o.name {
+					source = fi
+				}
+			}
+			if source == nil {
+				log.Fatalf("expected exactly one file in %s, but found: %v", dldir, fnames)
+			}
+		}
 	}
 
-	src := filepath.Join(dldir, fis[0].Name())
-	if fis[0].IsDir() {
-		src = filepath.Join(dldir, fis[0].Name(), o.name)
+	src := filepath.Join(dldir, source.Name())
+	if source.IsDir() {
+		src = filepath.Join(dldir, source.Name(), o.name)
 	}
 
 	_ = os.Mkdir("bin", 0755)
@@ -748,13 +836,20 @@ func (b *builder) getBinary() string {
 		log.Fatalf("error hard linking %s to %s: %v", src, binname, err)
 	}
 
+	if source.Mode().Perm()&0111 != 0111 {
+		err = os.Chmod(binname, source.Mode().Perm()|0111)
+		if err != nil {
+			log.Fatalf("error chmodding %s to %o: %v", binname, source.Mode().Perm()|0111, err)
+		}
+	}
+
 	return binname
 }
 
 func (b *builder) writeFiles(cfg map[string]interface{}) map[string]string {
 	ret := make(map[string]string)
 
-	if b.options.upstreamURLFormat != "" {
+	if b.options.getURL() != "" {
 		ret[b.getBinary()] = b.options.binpath()
 	}
 

@@ -9,7 +9,7 @@ local from = "/vagrant";
     lib.prov_aptinst([
        "./arm/consul.deb",
        "./armv6/prometheus.deb",
-       "./armv6/node_exporter.deb ",
+       "./armv6/node_exporter.deb",
        "./all/node_exporter-supervisord.deb",
        "./all/consul-local.deb",
        "./all/consul-client.deb",
@@ -20,6 +20,9 @@ local from = "/vagrant";
        "./armv6/process-exporter.deb",
        // "./all/process-exporter-register-consul.deb",
        "./all/process-exporter-config.deb",
+       "./armv6/script-exporter.deb",
+       "./all/script-exporter-register-consul.deb",
+       "./all/raspberrypi_exporter.deb",
     ]) +
     lib.prov_pissh(from)
 }
