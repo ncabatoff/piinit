@@ -34,13 +34,15 @@
       },
       {
          "inline": [
-            "apt-get update -y; DEBIAN_FRONTEND=noninteractive apt-get install -y supervisor iproute2 curl procps dnsutils vim-tiny net-tools"
+            "apt-get update -y",
+            "DEBIAN_FRONTEND=noninteractive apt-get install -y supervisor iproute2 curl procps dnsutils vim-tiny net-tools"
          ],
          "type": "shell"
       },
       {
          "inline": [
-            "apt-get update -y; DEBIAN_FRONTEND=noninteractive apt-get install -y ./amd64/consul.deb ./amd64/nomad.deb ./amd64/node_exporter.deb ./amd64/prometheus.deb"
+            "apt-get update -y",
+            "DEBIAN_FRONTEND=noninteractive apt-get install -y ./amd64/consul.deb ./amd64/nomad.deb ./amd64/node_exporter.deb ./amd64/prometheus.deb ./amd64/process-exporter.deb ./all/process-exporter-register-consul.deb ./all/process-exporter-config.deb"
          ],
          "type": "shell"
       }

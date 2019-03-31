@@ -227,12 +227,20 @@ scrape_configs:
   - targets: 
     - localhost:9090
 
-- job_name: node
+- job_name: node_exporter
   static_configs: 
   - targets: 
     - localhost:9100
 {{- range .CoreServers }}
     - {{ . }}:9100
+{{- end }}
+
+- job_name: process-exporter
+  static_configs: 
+  - targets: 
+    - localhost:9256
+{{- range .CoreServers }}
+    - {{ . }}:9256
 {{- end }}
 
 - job_name: consul-servers
@@ -355,6 +363,61 @@ update_config=1
 network={
   ssid="{{.WifiSsid}}"
   psk={{.WifiPsk}}
+}
+`,
+			},
+		}, []string{"all"},
+	},
+
+	{
+		Options{
+			name:              "process-exporter",
+			user:              "process-exporter",
+			version:           "0.4.0",
+			upstreamURLFormat: "https://github.com/ncabatoff/process-exporter/releases/download/v%s/process-exporter-%s.linux-%s.tar.gz",
+			isDaemon:          true,
+			argConf:           "-config.path",
+			configFile:        "process-exporter.yml",
+		}, []string{"armv6", "amd64"},
+	},
+
+	{
+		Options{
+			name:      "process-exporter-config",
+			configDir: "/opt/process-exporter/config",
+			rawConfigs: map[string]string{
+				"process-exporter.yml": `
+process_names:
+  - name: "{{.Comm}}"
+    cmdline:
+    - '.+'
+`,
+			},
+		}, []string{"all"},
+	},
+
+	{
+		Options{
+			name:      "process-exporter-register-consul",
+			configDir: "/opt/consul/config",
+			rawConfigs: map[string]string{
+				"process-exporter.json": `{
+	"service": {
+	  "id": "process-exporter",
+	  "name": "process-exporter",
+      "tags": ["prom"],
+	  "port": 9256,
+	  "checks": [
+		{
+		  "id": "api",
+		  "name": "HTTP API on port 9256",
+		  "http": "http://localhost:9256/metrics",
+		  "method": "GET",
+		  "interval": "10s",
+		  "timeout": "1s"
+		}
+	  ]
+	}
 }
 `,
 			},

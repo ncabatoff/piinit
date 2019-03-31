@@ -29,7 +29,8 @@
       },
       {
          "inline": [
-            "apt-get update -y; DEBIAN_FRONTEND=noninteractive apt-get install -y ./all/prometheus-register-consul.deb ./all/prometheus-local.deb ./all/consul-local.deb"
+            "apt-get update -y",
+            "DEBIAN_FRONTEND=noninteractive apt-get install -y ./all/prometheus-register-consul.deb ./all/prometheus-local.deb ./all/consul-local.deb"
          ],
          "type": "shell"
       },

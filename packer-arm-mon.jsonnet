@@ -15,6 +15,9 @@ local from = "/vagrant";
        "./all/prometheus-register-consul.deb",
        "./all/prometheus-local.deb",
        "./all/wifi-local.deb",
+       "./armv6/process-exporter.deb",
+       // "./all/process-exporter-register-consul.deb",
+       "./all/process-exporter-config.deb",
     ]) +
     lib.prov_pissh(from)
 }
