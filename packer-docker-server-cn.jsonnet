@@ -26,7 +26,6 @@ local lib = import 'packer.jsonnet';
        "./all/consul-local.deb",
        "./all/node_exporter-supervisord.deb",
        "./all/process-exporter-config.deb",
-       "./all/script-exporter-register-consul.deb",
        "./all/raspberrypi_exporter.deb",
     ]) +
       [

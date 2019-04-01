@@ -14,14 +14,11 @@ local from = "/vagrant";
        "./all/consul-local.deb",
        "./all/consul-client.deb",
        "./all/consul-static-hostid.deb",
-       "./all/prometheus-register-consul.deb",
        "./all/prometheus-local.deb",
        "./all/wifi-local.deb",
        "./armv6/process-exporter.deb",
-       // "./all/process-exporter-register-consul.deb",
        "./all/process-exporter-config.deb",
        "./armv6/script-exporter.deb",
-       "./all/script-exporter-register-consul.deb",
        "./all/raspberrypi_exporter.deb",
     ]) +
     lib.prov_pissh(from)

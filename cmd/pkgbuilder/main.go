@@ -221,14 +221,15 @@ log_level = "INFO"
 
 	{
 		Options{
-			name:              "prometheus",
-			user:              "prometheus",
-			version:           "2.7.1",
-			upstreamURLFormat: "https://github.com/prometheus/prometheus/releases/download/v%s/prometheus-%s.linux-%s.tar.gz",
-			isDaemon:          true,
-			argData:           "--storage.tsdb.path",
-			argConf:           "--config.file",
-			configFile:        "prometheus.yml",
+			name:                 "prometheus",
+			user:                 "prometheus",
+			version:              "2.7.1",
+			upstreamURLFormat:    "https://github.com/prometheus/prometheus/releases/download/v%s/prometheus-%s.linux-%s.tar.gz",
+			isDaemon:             true,
+			argData:              "--storage.tsdb.path",
+			argConf:              "--config.file",
+			exporterRegisterPort: 9090,
+			configFile:           "prometheus.yml",
 		}, []string{"armv6", "amd64"},
 	},
 
@@ -243,12 +244,12 @@ global:
   scrape_interval: "15s"
 
 scrape_configs: 
-- job_name: prometheus
+- job_name: prometheus-local
   static_configs: 
   - targets: 
     - localhost:9090
 
-- job_name: node_exporter
+- job_name: node_exporter-core
   static_configs: 
   - targets: 
     - localhost:9100
@@ -256,7 +257,7 @@ scrape_configs:
     - {{ . }}:9100
 {{- end }}
 
-- job_name: process-exporter
+- job_name: process-exporter-core
   static_configs: 
   - targets: 
     - localhost:9256
@@ -364,28 +365,7 @@ scrape_configs:
 
 	{
 		Options{
-			name:      "prometheus-register-consul",
-			configDir: "/opt/consul/config",
-			rawConfigs: map[string]string{
-				"prometheus.json": `{
-	"service": {
-	  "id": "prometheus",
-	  "name": "prometheus",
-	  "port": 9090,
-	  "checks": [
-		{
-		  "id": "api",
-		  "name": "HTTP API on port 9090",
-		  "http": "http://localhost:9090/metrics",
-		  "method": "GET",
-		  "interval": "10s",
-		  "timeout": "1s"
-		}
-	  ]
-	}
-}
-`,
-			},
+			name: "prometheus-register-consul",
 		}, []string{"all"},
 	},
 
@@ -441,13 +421,14 @@ network={
 
 	{
 		Options{
-			name:              "process-exporter",
-			user:              "process-exporter",
-			version:           "0.4.0",
-			upstreamURLFormat: "https://github.com/ncabatoff/process-exporter/releases/download/v%s/process-exporter-%s.linux-%s.tar.gz",
-			isDaemon:          true,
-			argConf:           "-config.path",
-			configFile:        "process-exporter.yml",
+			name:                 "process-exporter",
+			user:                 "process-exporter",
+			version:              "0.4.0",
+			upstreamURLFormat:    "https://github.com/ncabatoff/process-exporter/releases/download/v%s/process-exporter-%s.linux-%s.tar.gz",
+			isDaemon:             true,
+			argConf:              "-config.path",
+			exporterRegisterPort: 9256,
+			configFile:           "process-exporter.yml",
 		}, []string{"armv6", "amd64"},
 	},
 
@@ -468,71 +449,16 @@ process_names:
 
 	{
 		Options{
-			name:      "process-exporter-register-consul",
-			configDir: "/opt/consul/config",
-			rawConfigs: map[string]string{
-				"process-exporter.json": `{
-	"service": {
-	  "id": "process-exporter",
-	  "name": "process-exporter",
-      "tags": ["prom"],
-	  "port": 9256,
-	  "checks": [
-		{
-		  "id": "api",
-		  "name": "HTTP API on port 9256",
-		  "http": "http://localhost:9256/metrics",
-		  "method": "GET",
-		  "interval": "10s",
-		  "timeout": "1s"
-		}
-	  ]
-	}
-}
-`,
-			},
-		}, []string{"all"},
-	},
-
-	{
-		Options{
 			name: "script-exporter",
 			// We need root to run raspberrypi_exporter.  If we get other scripts
 			// that need less privs maybe we'll put them under a different parent.
-			user:              "root",
-			version:           "0.1.3",
-			upstreamURLFormat: "https://github.com/ncabatoff/script-exporter/releases/download/v%s/script-exporter_%s_linux_%s.tar.gz",
-			isDaemon:          true,
-			argConf:           "-script.path",
+			user:                 "root",
+			version:              "0.1.3",
+			upstreamURLFormat:    "https://github.com/ncabatoff/script-exporter/releases/download/v%s/script-exporter_%s_linux_%s.tar.gz",
+			isDaemon:             true,
+			exporterRegisterPort: 9661,
+			argConf:              "-script.path",
 		}, []string{"armv6", "amd64"},
-	},
-
-	{
-		Options{
-			name:      "script-exporter-register-consul",
-			configDir: "/opt/consul/config",
-			rawConfigs: map[string]string{
-				"script-exporter.json": `{
-	"service": {
-	  "id": "script-exporter",
-	  "name": "script-exporter",
-      "tags": ["prom"],
-	  "port": 9661,
-	  "checks": [
-		{
-		  "id": "api",
-		  "name": "HTTP API on port 9661",
-		  "http": "http://localhost:9661/metrics",
-		  "method": "GET",
-		  "interval": "10s",
-		  "timeout": "1s"
-		}
-	  ]
-	}
-}
-`,
-			},
-		}, []string{"all"},
 	},
 
 	{
@@ -592,6 +518,8 @@ type (
 		configDir string
 		// optional overwrite for default binpath of /opt/$pkgname/bin
 		binDir string
+		// port to register in consul
+		exporterRegisterPort int
 	}
 
 	builder struct {
@@ -673,46 +601,103 @@ stopsignal=INT
 }
 
 func (o Options) getScriptPreRemove() string {
-	return fmt.Sprintf("#!/bin/sh\nsupervisorctl stop %s", o.name)
+	var script string
+
+	if o.isDaemon {
+		script += fmt.Sprintf("supervisorctl stop %s\n", o.name)
+	}
+	if o.exporterRegisterPort != 0 {
+		script += fmt.Sprintf("rm -f /opt/consul/config/%s.json\n", o.name)
+	}
+	if script != "" {
+		return "#!/bin/sh\n\n" + script
+	}
+	return ""
 }
 
 func (o Options) getScriptPostRemove() string {
-	s := fmt.Sprintf("#!/bin/sh\nrm -f %s/%s.conf", supervisorConfDir, o.name)
-	if o.user != "" {
-		s += fmt.Sprintf("\nid -u %s 2>/dev/null && userdel %s", o.user, o.user)
+	var script string
+
+	if o.isDaemon {
+		script += fmt.Sprintf("rm -f %s/%s.conf\n", supervisorConfDir, o.name)
+		if o.user != "" {
+			script += fmt.Sprintf("id -u %s 2>/dev/null && userdel %s\n", o.user, o.user)
+		}
 	}
-	return s
+
+	if script != "" {
+		return "#!/bin/sh\n\n" + script
+	}
+	return ""
 }
 
 func (o Options) getScriptPreInstall() string {
-	if o.user == "" {
-		return ""
+	var script string
+
+	if o.isDaemon {
+		if o.user == "" {
+			return ""
+		}
+
+		script += fmt.Sprintf("id -u %s 2>/dev/null && exit 0\n", o.user)
+
+		if o.user == "nomad" {
+			script += fmt.Sprintf(`
+		if grep -q '^docker:' /etc/group; then
+			useradd -G docker %s 
+		else
+			useradd %s
+		fi
+	`, o.user, o.user)
+		} else {
+			script += fmt.Sprintf("useradd %s\n", o.user)
+		}
 	}
 
-	script := fmt.Sprintf("#!/bin/sh\nid -u %s 2>/dev/null && exit 0\n", o.user)
-
-	if o.user == "nomad" {
-		script += fmt.Sprintf(`
-	if grep -q '^docker:' /etc/group; then
-		useradd -G docker %s 
-	else
-		useradd %s
-	fi
-`, o.user, o.user)
-	} else {
-		script += fmt.Sprintf("useradd %s", o.user)
+	if o.exporterRegisterPort != 0 {
+		script += fmt.Sprintf(`cat - > /opt/consul/config/%s.json <<EOF
+{
+	"service": {
+	  "id": "%s-$(cat /etc/machine-id)",
+	  "name": "%s",
+      "tags": ["prom"],
+	  "port": %d,
+	  "checks": [
+		{
+		  "id": "%s",
+		  "name": "HTTP API on port %d",
+		  "http": "http://localhost:%d/metrics",
+		  "method": "GET",
+		  "interval": "10s",
+		  "timeout": "1s"
+		}
+	  ]
+	}
+}
+EOF
+`, o.name, o.name, o.name, o.exporterRegisterPort, o.name, o.exporterRegisterPort, o.exporterRegisterPort)
 	}
 
-	return script
+	if script != "" {
+		return "#!/bin/sh\n\n" + script
+	}
+	return ""
 }
 
 func (o Options) getScriptPostInstall() string {
-	s := "#!/bin/sh\n"
-	if o.user != "" {
-		s += fmt.Sprintf("chown -R %s.%s %s\n", o.user, o.user, o.basedir())
+	var script string
+
+	if o.isDaemon {
+		if o.user != "" {
+			script += fmt.Sprintf("chown -R %s.%s %s\n", o.user, o.user, o.basedir())
+		}
+		script += fmt.Sprintf("supervisorctl start %s\n", o.name)
 	}
-	s += fmt.Sprintf("supervisorctl start %s\n", o.name)
-	return s
+
+	if script != "" {
+		return "#!/bin/sh\n\n" + script
+	}
+	return ""
 }
 
 func (o Options) emptyFolders() []string {
@@ -735,6 +720,14 @@ func newBuilder(o Options) (*builder, error) {
 	return &builder{options: o, tmpdir: dir}, nil
 }
 
+func (b *builder) writeNonEmptyFileOrDie(name, body string) string {
+	if body == "" {
+		return ""
+	} else {
+		return b.writeFileOrDie(name, body)
+	}
+}
+
 func (b *builder) writeFileOrDie(name, body string) string {
 	tmppath := filepath.Join(b.tmpdir, name)
 	f, err := os.Create(tmppath)
@@ -753,15 +746,11 @@ func (b *builder) writeFileOrDie(name, body string) string {
 }
 
 func (b *builder) writeScripts() nfpm.Scripts {
-	if !b.options.isDaemon {
-		return nfpm.Scripts{}
-	}
-
 	return nfpm.Scripts{
-		PreInstall:  b.writeFileOrDie("preinst", b.options.getScriptPreInstall()),
-		PostInstall: b.writeFileOrDie("postinst", b.options.getScriptPostInstall()),
-		PreRemove:   b.writeFileOrDie("prerm", b.options.getScriptPreRemove()),
-		PostRemove:  b.writeFileOrDie("postrm", b.options.getScriptPostRemove()),
+		PreInstall:  b.writeNonEmptyFileOrDie("preinst", b.options.getScriptPreInstall()),
+		PostInstall: b.writeNonEmptyFileOrDie("postinst", b.options.getScriptPostInstall()),
+		PreRemove:   b.writeNonEmptyFileOrDie("prerm", b.options.getScriptPreRemove()),
+		PostRemove:  b.writeNonEmptyFileOrDie("postrm", b.options.getScriptPostRemove()),
 	}
 }
 

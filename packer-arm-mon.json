@@ -43,7 +43,7 @@
       {
          "inline": [
             "apt-get update -y",
-            "DEBIAN_FRONTEND=noninteractive apt-get install -y ./arm/consul.deb ./armv6/prometheus.deb ./armv6/node_exporter.deb ./all/node_exporter-supervisord.deb ./all/consul-local.deb ./all/consul-client.deb ./all/consul-static-hostid.deb ./all/prometheus-register-consul.deb ./all/prometheus-local.deb ./all/wifi-local.deb ./armv6/process-exporter.deb ./all/process-exporter-config.deb ./armv6/script-exporter.deb ./all/script-exporter-register-consul.deb ./all/raspberrypi_exporter.deb"
+            "DEBIAN_FRONTEND=noninteractive apt-get install -y ./arm/consul.deb ./armv6/prometheus.deb ./armv6/node_exporter.deb ./all/node_exporter-supervisord.deb ./all/consul-local.deb ./all/consul-client.deb ./all/consul-static-hostid.deb ./all/prometheus-local.deb ./all/wifi-local.deb ./armv6/process-exporter.deb ./all/process-exporter-config.deb ./armv6/script-exporter.deb ./all/raspberrypi_exporter.deb"
          ],
          "type": "shell"
       },

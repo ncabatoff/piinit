@@ -16,10 +16,8 @@ local from = "/vagrant";
        "./all/consul-static-hostid.deb",
        "./all/nomad-server.deb",
        "./armv6/process-exporter.deb",
-       // "./all/process-exporter-register-consul.deb",
        "./all/process-exporter-config.deb",
        "./armv6/script-exporter.deb",
-       "./all/script-exporter-register-consul.deb",
        "./all/raspberrypi_exporter.deb",
     ]) +
     lib.prov_pissh(from)

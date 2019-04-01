@@ -42,4 +42,6 @@ popd
 go get -u github.com/fatih/color
 go get -u github.com/google/go-jsonnet/jsonnet
 go get -u github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb
-
+go get -u github.com/hashicorp/go-getter
+go get -u github.com/cheggaaa/pb
+go install github.com/hashicorp/go-getter/cmd/go-getter

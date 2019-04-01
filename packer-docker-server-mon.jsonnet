@@ -22,13 +22,11 @@ local lib = import 'packer.jsonnet';
   provisioners:
     lib.prov_custompkgs("./packages/", ["all"]) +
     lib.prov_aptinst([
-       "./all/prometheus-register-consul.deb",
        "./all/prometheus-local.deb",
        "./all/consul-client.deb",
        "./all/consul-local.deb",
        "./all/node_exporter-supervisord.deb",
        "./all/process-exporter-config.deb",
-       "./all/script-exporter-register-consul.deb",
        "./all/raspberrypi_exporter.deb",
     ]) +
       [
