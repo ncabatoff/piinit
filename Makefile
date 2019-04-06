@@ -6,5 +6,5 @@
 
 packages: pkgbuilder
 	@mkdir -p packages
-	cd packages && ../pkgbuilder && touch packages
+	cd packages && ../pkgbuilder && touch .
 

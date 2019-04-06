@@ -249,6 +249,11 @@ scrape_configs:
   - targets: 
     - localhost:9090
 
+- job_name: consul-exporter
+  static_configs: 
+  - targets: 
+    - localhost:9107
+
 - job_name: node_exporter-core
   static_configs: 
   - targets: 
@@ -271,7 +276,7 @@ scrape_configs:
   - targets: 
     - localhost:9661
 {{- range .CoreServers }}
-    - {{ . }}:9100
+    - {{ . }}:9661
 {{- end }}
 
 - job_name: consul-servers
@@ -468,6 +473,16 @@ process_names:
 			binDir:         "/opt/script-exporter/config",
 		}, []string{"all"},
 	},
+
+	{
+		Options{
+			name:              "consul_exporter",
+			user:              "root",
+			version:           "0.4.0",
+			upstreamURLFormat: "https://github.com/prometheus/consul_exporter/releases/download/v%s/consul_exporter-%s.linux-%s.tar.gz",
+			isDaemon:          true,
+		}, []string{"armv6", "amd64"},
+	},
 }
 
 func buildOrDie(o Options, arches []string, cfg map[string]interface{}) {
@@ -620,7 +635,7 @@ func (o Options) getScriptPostRemove() string {
 
 	if o.isDaemon {
 		script += fmt.Sprintf("rm -f %s/%s.conf\n", supervisorConfDir, o.name)
-		if o.user != "" {
+		if o.user != "" && o.user != "root" {
 			script += fmt.Sprintf("id -u %s 2>/dev/null && userdel %s\n", o.user, o.user)
 		}
 	}
@@ -634,11 +649,7 @@ func (o Options) getScriptPostRemove() string {
 func (o Options) getScriptPreInstall() string {
 	var script string
 
-	if o.isDaemon {
-		if o.user == "" {
-			return ""
-		}
-
+	if o.isDaemon && o.user != "" && o.user != "root" {
 		script += fmt.Sprintf("id -u %s 2>/dev/null && exit 0\n", o.user)
 
 		if o.user == "nomad" {
