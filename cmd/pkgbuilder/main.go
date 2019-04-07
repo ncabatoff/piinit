@@ -427,7 +427,7 @@ network={
 	{
 		Options{
 			name:                 "process-exporter",
-			user:                 "process-exporter",
+			user:                 "root",
 			version:              "0.4.0",
 			upstreamURLFormat:    "https://github.com/ncabatoff/process-exporter/releases/download/v%s/process-exporter-%s.linux-%s.tar.gz",
 			isDaemon:             true,
@@ -439,8 +439,9 @@ network={
 
 	{
 		Options{
-			name:      "process-exporter-config",
-			configDir: "/opt/process-exporter/config",
+			name:              "process-exporter-config",
+			configDir:         "/opt/process-exporter/config",
+			templateLeftDelim: "",
 			rawConfigs: map[string]string{
 				"process-exporter.yml": `
 process_names:
@@ -536,6 +537,8 @@ type (
 		binDir string
 		// port to register in consul
 		exporterRegisterPort int
+		// use a different delim instead of {{ }}
+		templateLeftDelim, templateRightDelim string
 	}
 
 	builder struct {
@@ -865,6 +868,7 @@ func (b *builder) writeFiles(cfg map[string]interface{}) map[string]string {
 
 	for name, contents := range b.options.rawConfigs {
 		tmpl := template.New(name)
+		tmpl.Delims(b.options.templateLeftDelim, b.options.templateRightDelim)
 		tmpl = tmpl.Funcs(template.FuncMap{"jsm": func(arg interface{}) (string, error) {
 			b, err := json.Marshal(arg)
 			return string(b), err
