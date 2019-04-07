@@ -441,7 +441,7 @@ network={
 		Options{
 			name:              "process-exporter-config",
 			configDir:         "/opt/process-exporter/config",
-			templateLeftDelim: "",
+			templateLeftDelim: "noDelimsPlease",
 			rawConfigs: map[string]string{
 				"process-exporter.yml": `
 process_names:
