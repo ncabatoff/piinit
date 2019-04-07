@@ -20,6 +20,7 @@ local from = "/vagrant";
        "./all/process-exporter-config.deb",
        "./armv6/script-exporter.deb",
        "./all/raspberrypi_exporter.deb",
+       "./armv6/consul_exporter.deb",
     ]) +
     lib.prov_pissh(from)
 }

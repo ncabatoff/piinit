@@ -20,8 +20,10 @@ local lib = import 'packer.jsonnet';
     ],
   ],
   provisioners:
-    lib.prov_custompkgs("./packages/", ["all"]) +
+    lib.prov_custompkgs("./packages/", ["amd64", "all"]) +
     lib.prov_aptinst([
+       "./amd64/prometheus.deb",
+       "./amd64/consul_exporter.deb",
        "./all/prometheus-local.deb",
        "./all/consul-client.deb",
        "./all/consul-local.deb",

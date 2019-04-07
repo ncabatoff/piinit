@@ -247,17 +247,17 @@ scrape_configs:
 - job_name: prometheus-local
   static_configs: 
   - targets: 
-    - localhost:9090
+    - 127.0.0.1:9090
 
-- job_name: consul-exporter
+- job_name: consul_exporter
   static_configs: 
   - targets: 
-    - localhost:9107
+    - 127.0.0.1:9107
 
 - job_name: node_exporter-core
   static_configs: 
   - targets: 
-    - localhost:9100
+    - 127.0.0.1:9100
 {{- range .CoreServers }}
     - {{ . }}:9100
 {{- end }}
@@ -265,7 +265,7 @@ scrape_configs:
 - job_name: process-exporter-core
   static_configs: 
   - targets: 
-    - localhost:9256
+    - 127.0.0.1:9256
 {{- range .CoreServers }}
     - {{ . }}:9256
 {{- end }}
@@ -274,7 +274,7 @@ scrape_configs:
   metrics_path: /metrics/raspberrypi_exporter
   static_configs: 
   - targets: 
-    - localhost:9661
+    - 127.0.0.1:9661
 {{- range .CoreServers }}
     - {{ . }}:9661
 {{- end }}
@@ -322,7 +322,7 @@ scrape_configs:
 
 - job_name: consul-services
   consul_sd_configs: 
-  - server: localhost:8500
+  - server: 127.0.0.1:8500
   relabel_configs: 
   - action: keep
     regex: .*,prom,.*
@@ -341,7 +341,7 @@ scrape_configs:
 
 - job_name: nomad-clients
   consul_sd_configs: 
-  - server: localhost:8500
+  - server: 127.0.0.1:8500
     services: 
     - nomad-client
   metrics_path: /v1/metrics
@@ -356,7 +356,7 @@ scrape_configs:
 
 - job_name: consul-clients
   consul_sd_configs: 
-  - server: localhost:8500
+  - server: 127.0.0.1:8500
     services: 
     - consul-client
   metrics_path: /v1/agent/metrics
@@ -481,6 +481,7 @@ process_names:
 			version:           "0.4.0",
 			upstreamURLFormat: "https://github.com/prometheus/consul_exporter/releases/download/v%s/consul_exporter-%s.linux-%s.tar.gz",
 			isDaemon:          true,
+			args:              "--consul.timeout=1s",
 		}, []string{"armv6", "amd64"},
 	},
 }
@@ -677,7 +678,7 @@ func (o Options) getScriptPreInstall() string {
 		{
 		  "id": "%s",
 		  "name": "HTTP API on port %d",
-		  "http": "http://localhost:%d/metrics",
+		  "http": "http://localhost:%d/",
 		  "method": "GET",
 		  "interval": "10s",
 		  "timeout": "1s"

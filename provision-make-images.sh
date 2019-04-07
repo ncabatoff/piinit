@@ -15,6 +15,6 @@ packer build packer-docker.json
 # private 'all' packages here.
 cd /home/vagrant
 jsonnet -o packer-docker-server-cn.json /vagrant/packer-docker-server-cn.jsonnet
-jsonnet -o packer-docker-server-mon.json /vagrant/packer-docker-server-mon.jsonnet
 packer build packer-docker-server-cn.json
+jsonnet -o packer-docker-server-mon.json /vagrant/packer-docker-server-mon.jsonnet
 packer build packer-docker-server-mon.json
