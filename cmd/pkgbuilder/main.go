@@ -19,51 +19,41 @@ import (
 
 const (
 	supervisorConfDir = "/etc/supervisor/conf.d"
-	nomadWrapper      = `#!/bin/sh
+	consulWrapper     = `#!/bin/sh
 
-myName=localhost
-while [ "$myName" = "localhost" ]; do
-  if [ -f /opt/nomad/config/server.hcl ] || [ -f /opt/nomad/config/client.hcl ]; then
-    break
-  fi
-  myName=$(hostname -s)
-  sleep 1
-done
-myIP=$(for i in $(hostname -i); do if echo $i | egrep -q '(::|^127)'; then :; else echo $i; fi; done)
+# Only delay startup if we're using static host id and we haven't already created it.
 
-cat - > /opt/nomad/config/advertise.hcl << EOF
-advertise {
-  http = "$myIP"
-  rpc  = "$myIP"
-  serf = "$myIP"
-}
-EOF
-
-exec "$@"
-`
-	consulWrapper = `#!/bin/sh
+test ! -f /opt/consul/config/static-host-id.hcl && exec "$@"
+test -f /opt/consul/data/node-id && exec "$@"
 
 myName=localhost
 while [ "$myName" = "localhost" ] || [ ! -f /opt/consul/config/local.hcl ]; do
   myName=$(hostname -s)
   sleep 1
 done
-myIP=$(for i in $(hostname -i); do if echo $i | egrep -q '(::|^127)'; then :; else echo $i; fi; done)
 
-exec "$@" -bind=$myIP -node=$myName
+exec "$@"
 `
 )
 
+// Packages with -config in their name contain only configuration.
+// Packages with -config-local in their name contain parameterized config based
+// on arguments given to pkgbuilder when building them.
 var recipes = []recipe{
 	{
 		Options{
-			name:      "consul-local",
-			depends:   []string{"consul"},
-			configDir: "/opt/consul/config",
+			name:               "consul-config-local",
+			depends:            []string{"consul"},
+			configDir:          "/opt/consul/config",
+			templateLeftDelim:  "[[",
+			templateRightDelim: "]]",
 			rawConfigs: map[string]string{
 				"local.hcl": `# Settings need by both server and client, but not generic
-encrypt = "{{ .ConsulSerfEncrypt }}"
-retry_join = {{ jsm .CoreServers }}
+encrypt = "[[ .ConsulSerfEncrypt ]]"
+retry_join = [[ jsm .CoreServers ]]
+bind_addr = <<EOF
+{{ GetPrivateInterfaces | include "network" "[[.CoreCidr]]" | attr "address" }}
+EOF
 `,
 			},
 		}, []string{"all"},
@@ -71,7 +61,7 @@ retry_join = {{ jsm .CoreServers }}
 
 	{
 		Options{
-			name:      "consul-server",
+			name:      "consul-config-server",
 			depends:   []string{"consul"},
 			configDir: "/opt/consul/config",
 			rawConfigs: map[string]string{
@@ -86,20 +76,7 @@ ui = true
 
 	{
 		Options{
-			name:      "consul-dnsmasq-localagent",
-			depends:   []string{"consul", "dnsmasq"},
-			configDir: "/etc/dnsmasq.d",
-			rawConfigs: map[string]string{
-				"10-consul": `# Enable forward lookup of the 'consul' domain:
-server=/consul/127.0.0.1#8600
-`,
-			},
-		}, []string{"all"},
-	},
-
-	{
-		Options{
-			name:      "consul-static-hostid",
+			name:      "consul-config-static-hostid",
 			depends:   []string{"consul"},
 			configDir: "/opt/consul/config",
 			rawConfigs: map[string]string{
@@ -132,14 +109,14 @@ telemetry {
 }
 `,
 			},
-		}, []string{"arm", "amd64"},
+		}, []string{"arm", "arm64", "amd64"},
 	},
 
 	{
 		// Register the consul agent as a "service" purely so that
 		// Prometheus can discover all agents and scrape them.
 		Options{
-			name:      "consul-client",
+			name:      "consul-config-client",
 			depends:   []string{"consul"},
 			configDir: "/opt/consul/config",
 			rawConfigs: map[string]string{
@@ -157,7 +134,7 @@ telemetry {
 
 	{
 		Options{
-			name:      "nomad-client",
+			name:      "nomad-config-client",
 			depends:   []string{"nomad"},
 			configDir: "/opt/nomad/config",
 			rawConfigs: map[string]string{
@@ -178,7 +155,32 @@ consul {
 
 	{
 		Options{
-			name:      "nomad-server",
+			name:               "nomad-config-local",
+			depends:            []string{"nomad"},
+			configDir:          "/opt/nomad/config",
+			templateLeftDelim:  "[[",
+			templateRightDelim: "]]",
+			rawConfigs: map[string]string{
+				"local.hcl": `
+advertise {
+  http = <<EOF
+{{- GetPrivateInterfaces | include "network" "[[.CoreCidr]]" | attr "address" -}}
+EOF
+  rpc = <<EOF
+{{- GetPrivateInterfaces | include "network" "[[.CoreCidr]]" | attr "address" -}}
+EOF
+  serf = <<EOF
+{{- GetPrivateInterfaces | include "network" "[[.CoreCidr]]" | attr "address" -}}
+EOF
+}
+`,
+			},
+		}, []string{"all"},
+	},
+
+	{
+		Options{
+			name:      "nomad-config-server",
 			depends:   []string{"nomad"},
 			configDir: "/opt/nomad/config",
 			rawConfigs: map[string]string{
@@ -204,7 +206,6 @@ consul {
 			args:              "agent",
 			argData:           "-data-dir",
 			argConf:           "-config",
-			wrapper:           nomadWrapper,
 			rawConfigs: map[string]string{
 				"common.hcl": `
 telemetry {
@@ -216,7 +217,7 @@ disable_update_check = true
 log_level = "INFO"
 `,
 			},
-		}, []string{"arm", "amd64"},
+		}, []string{"arm", "arm64", "amd64"},
 	},
 
 	{
@@ -230,12 +231,12 @@ log_level = "INFO"
 			argConf:              "--config.file",
 			exporterRegisterPort: 9090,
 			configFile:           "prometheus.yml",
-		}, []string{"armv6", "amd64"},
+		}, []string{"armv6", "arm64", "amd64"},
 	},
 
 	{
 		Options{
-			name:       "prometheus-local",
+			name:       "prometheus-config-local",
 			configFile: "prometheus.yml",
 			configDir:  "/opt/prometheus/config",
 			rawConfigs: map[string]string{
@@ -383,7 +384,7 @@ scrape_configs:
 			isDaemon:          true,
 			args:              "--collector.supervisord --collector.wifi --no-collector.nfs --no-collector.nfsd",
 			argConf:           "--collector.textfile.directory",
-		}, []string{"armv6", "armv7", "amd64"},
+		}, []string{"armv6", "armv7", "arm64", "amd64"},
 	},
 
 	{
@@ -428,13 +429,13 @@ network={
 		Options{
 			name:                 "process-exporter",
 			user:                 "root",
-			version:              "0.4.0",
+			version:              "0.5.0",
 			upstreamURLFormat:    "https://github.com/ncabatoff/process-exporter/releases/download/v%s/process-exporter-%s.linux-%s.tar.gz",
 			isDaemon:             true,
 			argConf:              "-config.path",
 			exporterRegisterPort: 9256,
 			configFile:           "process-exporter.yml",
-		}, []string{"armv6", "amd64"},
+		}, []string{"armv6", "arm64", "amd64"},
 	},
 
 	{
@@ -464,7 +465,7 @@ process_names:
 			isDaemon:             true,
 			exporterRegisterPort: 9661,
 			argConf:              "-script.path",
-		}, []string{"armv6", "amd64"},
+		}, []string{"armv6", "arm64", "amd64"},
 	},
 
 	{
@@ -483,7 +484,7 @@ process_names:
 			upstreamURLFormat: "https://github.com/prometheus/consul_exporter/releases/download/v%s/consul_exporter-%s.linux-%s.tar.gz",
 			isDaemon:          true,
 			args:              "--consul.timeout=1s",
-		}, []string{"armv6", "amd64"},
+		}, []string{"armv6", "arm64", "amd64"},
 	},
 }
 
@@ -955,7 +956,7 @@ func (b *builder) build(cfg map[string]interface{}) {
 
 func main() {
 	var (
-		flagArches   = flag.String("arches", "all,amd64,arm,armv6", "arches to build")
+		flagArches   = flag.String("arches", "all,arm64,amd64,arm,armv6", "arches to build")
 		flagPackages = flag.String("packages", "", "packages to build, or all if none specified")
 		flagConfig   = flag.String("config", "", "json package config")
 	)

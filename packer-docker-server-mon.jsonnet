@@ -24,9 +24,9 @@ local lib = import 'packer.jsonnet';
     lib.prov_aptinst([
        "./amd64/prometheus.deb",
        "./amd64/consul_exporter.deb",
-       "./all/prometheus-local.deb",
-       "./all/consul-client.deb",
-       "./all/consul-local.deb",
+       "./all/prometheus-config-local.deb",
+       "./all/consul-config-client.deb",
+       "./all/consul-config-local.deb",
        "./all/node_exporter-supervisord.deb",
        "./all/process-exporter-config.deb",
        "./all/raspberrypi_exporter.deb",

@@ -20,7 +20,11 @@ mkdir -p /home/vagrant/packages
 cd /home/vagrant/packages
 rsync -r /vagrant/packages/amd64 ./
 encrypt=`dd if=/dev/urandom bs=16 count=1 2>/dev/null | base64`
-pkgbuilder -arches all -config '{"ConsulSerfEncrypt": "'"$encrypt"'", "CoreServers": ["192.168.2.51", "192.168.2.52", "192.168.2.53"]}'
+pkgbuilder -arches all -config '{
+  "ConsulSerfEncrypt": "'"$encrypt"'",
+  "CoreServers": ["192.168.2.51", "192.168.2.52", "192.168.2.53"],
+  "CoreCidr": "192.168.2.0/24"
+}'
 
 
 

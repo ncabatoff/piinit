@@ -5,7 +5,7 @@ goVersion=1.11
 packerVersion=1.3.4
 
 sudo apt-get update -qq
-sudo apt-get install -y software-properties-common
+sudo apt-get install -y software-properties-common language-pack-en
 sudo add-apt-repository --yes ppa:gophers/archive
 
 # Install required packages
@@ -40,7 +40,7 @@ popd
 
 # Download and install go-jsonnet and jsonnet-bundler
 go get -u github.com/fatih/color
-go get -u github.com/google/go-jsonnet/jsonnet
+go get -u github.com/google/go-jsonnet/cmd/jsonnet
 go get -u github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb
 go get -u github.com/hashicorp/go-getter
 go get -u github.com/cheggaaa/pb

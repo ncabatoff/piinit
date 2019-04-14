@@ -37,7 +37,7 @@ fi
 
 # don't assume jq is installed, use grep/sed instead
 # iso_url=$(jq -r .builders[0].iso_url < $PACKERFILE)
-iso_url=$(grep '"iso_url":' < $PACKERFILE |sed -e 's/"iso_url",//' -e s/,//)
+iso_url=$(grep '"iso_url":' < $PACKERFILE |sed -e 's/"iso_url": "//' -e 's/",//')
 iso_base=$(basename "$iso_url")
 if [ ! -f "$iso_base" ]; then
     echo "Downloading ARM OS image $iso_base"

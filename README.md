@@ -186,31 +186,3 @@ rather have the core Consul/Nomad cluster as reliable and predictable as possibl
 Eventually I plan to add TLS (and probably Vault) to the mix.  For now the goal
 is to get the simplest thing possible running smoothly.
 
-### MacOS
-
-To use Consul service discovery on your local MacOS machine:
-
-- create a file /etc/resolver/consul containing the single line
-```
-nameserver 127.0.0.1
-```
-- brew install dnsmasq
-- add these lines to /usr/local/etc/dnsmasq.conf:
-```
-server=/consul/192.168.2.51#8600
-server=/consul/192.168.2.52#8600
-server=/consul/192.168.2.53#8600
-```
-- sudo brew services start dnsmasq
-
-The HashiCorp recommendation would be to run a local Consul agent, but the above
-is sufficient and if I can avoid having another moving part to break I will.
-
-NOTE: The Go resolver doesn't yet work properly on MacOS, so some Go binaries
-(e.g. terraform) will not look in /etc/resolver/ to perform DNS name resolution.
-A possible workaround if you want to run Terraform is to run it via docker so
-that it effectively runs under Linux instead of MacOS, but when I tried this I 
-ran into a conflict with my local network (192.268.2.0/24)
-being used for another purpose in the Docker Desktop Hyperkit VM.  
-
-
