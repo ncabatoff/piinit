@@ -18,8 +18,13 @@ import (
 )
 
 const (
-	supervisorConfDir = "/etc/supervisor/conf.d"
-	consulWrapper     = `#!/bin/sh
+	consulVersion         = "1.5.3"
+	nomadVersion          = "0.9.4"
+	prometheusVersion     = "2.11.2"
+	nodeExporterVersion   = "0.18.1"
+	consulExporterVersion = "0.5.0"
+	supervisorConfDir     = "/etc/supervisor/conf.d"
+	consulWrapper         = `#!/bin/sh
 
 # Only delay startup if we're using static host id and we haven't already created it.
 
@@ -91,7 +96,7 @@ disable_host_node_id = false  # must be true for docker, but desirable to have f
 		Options{
 			name:              "consul",
 			user:              "consul",
-			version:           "1.4.4",
+			version:           consulVersion,
 			upstreamURLFormat: "https://releases.hashicorp.com/consul/%s/consul_%s_linux_%s.zip",
 			isDaemon:          true,
 			args:              "agent",
@@ -200,7 +205,7 @@ consul {
 		Options{
 			name:              "nomad",
 			user:              "nomad",
-			version:           "0.8.7",
+			version:           nomadVersion,
 			upstreamURLFormat: "https://releases.hashicorp.com/nomad/%s/nomad_%s_linux_%s.zip",
 			isDaemon:          true,
 			args:              "agent",
@@ -224,7 +229,7 @@ log_level = "INFO"
 		Options{
 			name:                 "prometheus",
 			user:                 "prometheus",
-			version:              "2.7.1",
+			version:              prometheusVersion,
 			upstreamURLFormat:    "https://github.com/prometheus/prometheus/releases/download/v%s/prometheus-%s.linux-%s.tar.gz",
 			isDaemon:             true,
 			argData:              "--storage.tsdb.path",
@@ -379,7 +384,7 @@ scrape_configs:
 		Options{
 			name:              "node_exporter",
 			user:              "root",
-			version:           "0.17.0",
+			version:           nodeExporterVersion,
 			upstreamURLFormat: "https://github.com/prometheus/node_exporter/releases/download/v%s/node_exporter-%s.linux-%s.tar.gz",
 			isDaemon:          true,
 			args:              "--collector.supervisord --collector.wifi --no-collector.nfs --no-collector.nfsd",
@@ -480,7 +485,7 @@ process_names:
 		Options{
 			name:              "consul_exporter",
 			user:              "root",
-			version:           "0.4.0",
+			version:           consulExporterVersion,
 			upstreamURLFormat: "https://github.com/prometheus/consul_exporter/releases/download/v%s/consul_exporter-%s.linux-%s.tar.gz",
 			isDaemon:          true,
 			args:              "--consul.timeout=1s",
