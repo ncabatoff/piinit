@@ -5,7 +5,7 @@ local from = "/vagrant";
   provisioners:
     lib.prov_ssh(from, "pi") +
     lib.prov_aptinst(["supervisor", "iproute2", "curl", "procps"]) +
-    lib.prov_dpkgarmel() +
+    lib.prov_dpkg_armel() +
     lib.prov_custompkgs(from+"/packages/", ["arm", "armv6", "armv7", "all"]) +
     lib.prov_aptinst([
        "./arm/consul.deb",
