@@ -26,8 +26,10 @@ const (
 	supervisorConfDir     = "/etc/supervisor/conf.d"
 	consulWrapper         = `#!/bin/sh
 
-# Only delay startup if we're using static host id and we haven't already created it.
+# On non-server nodes, blow away everything except node-id on startup.
+test -f /opt/consul/config/server.hcl || rm -rf $(find /opt/consul/data/ -mindepth 1 -type d)
 
+# Only delay startup if we're using static host id and we haven't already created it.
 test ! -f /opt/consul/config/static-host-id.hcl && exec "$@"
 test -f /opt/consul/data/node-id && exec "$@"
 
@@ -616,6 +618,9 @@ numprocs=1
 autostart=true
 autorestart=true
 stopsignal=INT
+startsecs=0
+startretries=9999999
+
 `, o.name, o.command(), o.logdir(), o.name, o.logdir(), o.name)
 
 	if o.user != "" {
