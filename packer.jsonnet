@@ -11,9 +11,9 @@
   build_rock64():: [
     {
       type: "arm-image",
-      iso_url : "file:///vagrant/stretch-minimal-rock64-0.7.8-1061-arm64.img",
+      iso_url : "file:///vagrant/stretch-minimal-rock64-0.8.3-1141-arm64.img",
       iso_checksum_type: "sha256",
-      iso_checksum: "07f0f370814ebfb51203f0d63d8ebdfaf669e9d8115933fb7beafbf1ec2817e5",
+      iso_checksum: "e7fb93309930c22c4cbd78d4aeb1341d0a36b16e9e6dae35f56c55d4b61c87e0",
       qemu_binary: "qemu-aarch64-static",
       image_mounts: ["", "", "", "", "", "/boot", "/"],
       // "last_partition_extra_size" : 1073741824,
@@ -91,5 +91,31 @@
       source: from+a,
       destination: a,
     } for a in arches
+  ],
+  prov_fstab_efi_ro():: [
+    // Make sure that the boot device is mounted readonly
+    {
+      type: "shell",
+      inline: [
+        "perl -i -a -n -e '
+          if ($F[0] == q(LABEL=boot)) {
+            my %opts = map {$_, 1} split /,/, $F[3];
+            $opts{ro} = 1;
+            $F[3] = join q(,), keys %opts;
+          }
+          print qq(@F\n)' /etc/fstab"
+      ],
+    },
+  ],
+  prov_fstab_minio():: [
+    // Make sure fstab entries exist for minio devices
+    {
+      type: "shell",
+      inline: [
+        "sed -i /^LABEL=minio/d /etc/fstab",
+        "echo LABEL=minio1 /export1 ext4 nofail,auto,noatime 0 1 >> /etc/fstab",
+        "echo LABEL=minio2 /export2 ext4 nofail,auto,noatime 0 1 >> /etc/fstab",
+      ],
+    },
   ],
 }
