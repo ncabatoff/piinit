@@ -21,7 +21,7 @@ local lib = import 'packer.jsonnet';
   ],
   provisioners:
     lib.prov_custompkgs("./packages/", ["amd64", "all"]) +
-    lib.prov_aptinst([
+    lib.prov_aptinst_noupdate([
        "./amd64/prometheus.deb",
        "./amd64/consul_exporter.deb",
        "./all/prometheus-config-local.deb",

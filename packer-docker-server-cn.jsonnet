@@ -20,7 +20,7 @@ local lib = import 'packer.jsonnet';
   ],
   provisioners:
     lib.prov_custompkgs("./packages/", ["all"]) +
-    lib.prov_aptinst([
+    lib.prov_aptinst_noupdate([
        "./all/nomad-config-server.deb",
        "./all/nomad-config-local.deb",
        "./all/consul-config-server.deb",

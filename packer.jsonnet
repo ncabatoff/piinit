@@ -84,6 +84,14 @@
       ]
     },
   ],
+  prov_aptinst_noupdate(pkgs):: [
+    {
+      type: "shell",
+      inline: [
+        "DEBIAN_FRONTEND=noninteractive apt-get install -y " + std.join(' ', pkgs),
+      ]
+    },
+  ],
   prov_custompkgs(from, arches):: [
     {
       type: "file",
