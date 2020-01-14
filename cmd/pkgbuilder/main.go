@@ -19,7 +19,7 @@ import (
 
 const (
 	consulVersion         = "1.5.3"
-	nomadVersion          = "0.9.4"
+	nomadVersion          = "0.10.2"
 	prometheusVersion     = "2.11.2"
 	nodeExporterVersion   = "0.18.1"
 	consulExporterVersion = "0.5.0"
@@ -35,6 +35,16 @@ test -f /opt/consul/data/node-id && exec "$@"
 
 myName=localhost
 while [ "$myName" = "localhost" ] || [ ! -f /opt/consul/config/local.hcl ]; do
+  myName=$(hostname -s)
+  sleep 1
+done
+
+exec "$@"
+`
+	nomadWrapper = `#!/bin/sh
+
+myName=localhost
+while [ "$myName" = "localhost" ] || ! /opt/consul/bin/consul catalog nodes 2>/dev/null; do
   myName=$(hostname -s)
   sleep 1
 done
@@ -209,6 +219,7 @@ consul {
 			user:              "nomad",
 			version:           nomadVersion,
 			upstreamURLFormat: "https://releases.hashicorp.com/nomad/%s/nomad_%s_linux_%s.zip",
+			wrapper:           nomadWrapper,
 			isDaemon:          true,
 			args:              "agent",
 			argData:           "-data-dir",
@@ -346,6 +357,19 @@ scrape_configs:
     # assume the name node_exporter.  Fix on ingestion.
     regex: node-exporter
     replacement: node_exporter
+
+# use nomad-clients as the basis for node-exporter
+- job_name: node_exporter-clients
+  consul_sd_configs: 
+  - server: 127.0.0.1:8500
+    services: 
+    - nomad-client
+  relabel_configs: 
+  - action: replace
+    source_labels: [__address__]
+    regex: '([^:]*):4646'
+    replacement: '${1}:9100'
+    target_label: __address__
 
 - job_name: nomad-clients
   consul_sd_configs: 
