@@ -12,6 +12,7 @@ Vagrant.configure("2") do |config|
     # https://betacloud.io/get-rid-of-ubuntu-xenial-16-04-cloudimg-console-log/
     vb.customize [ "modifyvm", :id, "--uartmode1", "disconnected" ]
     vb.customize [ "guestproperty", "set", :id, "/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold", 1000 ]
+    vb.memory = 1500
   end
   config.vm.synced_folder "./", "/vagrant", disabled: false
 
