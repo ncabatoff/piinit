@@ -38,10 +38,16 @@ unzip -u packer_${packerVersion}_linux_amd64.zip
 sudo cp packer /usr/local/bin
 popd
 
-# Download and install go-jsonnet and jsonnet-bundler
-go get -u github.com/fatih/color
-go get -u github.com/google/go-jsonnet/cmd/jsonnet
-go get -u github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb
-go get -u github.com/hashicorp/go-getter
-go get -u github.com/cheggaaa/pb
-go install github.com/hashicorp/go-getter/cmd/go-getter
+jsonnetVer=v0.14.0
+jsonnetTgz=jsonnet-bin-$jsonnetVer-linux.tar.gz
+wget -q -O /tmp/$jsonnetTgz https://github.com/google/jsonnet/releases/download/$jsonnetVer/$jsonnetTgz
+sudo tar zxfC /tmp/$jsonnetTgz /usr/local/bin jsonnet
+
+wget -q -O /tmp/jb https://github.com/jsonnet-bundler/jsonnet-bundler/releases/download/v0.2.0/jb-linux-amd64
+chmod 755 /tmp/jb
+sudo cp /tmp/jb /usr/local/bin
+
+gogetterVer=1.4.1
+gogetterZip=go-getter_${gogetterVer}_linux_amd64.zip
+wget -q -O /tmp/$gogetterZip https://github.com/ncabatoff/go-getter/releases/download/v$gogetterVer/$gogetterZip
+sudo unzip -o -d /usr/local/bin /tmp/$gogetterZip go-getter
