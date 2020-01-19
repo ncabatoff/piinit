@@ -23,18 +23,17 @@
       {
          "destination": "all",
          "generated": true,
-         "source": "./packages/all",
+         "source": "./packages/vm/all",
+         "type": "file"
+      },
+      {
+         "destination": "./",
+         "source": "/vagrant/provision-install-packages.sh",
          "type": "file"
       },
       {
          "inline": [
-            "apt-get update -y",
-            "DEBIAN_FRONTEND=noninteractive apt-get install -y ./all/nomad-server.deb ./all/consul-server.deb ./all/consul-local.deb ./all/node_exporter-supervisord.deb ./all/process-exporter-config.deb ./all/raspberrypi_exporter.deb"
-         ],
-         "type": "shell"
-      },
-      {
-         "inline": [
+            "./provision-install-packages.sh '' ./all server",
             "supervisorctl stop consul",
             "rm -rf /opt/consul/data/*",
             "supervisorctl stop nomad",

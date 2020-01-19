@@ -30,7 +30,7 @@
       {
          "destination": "all",
          "generated": true,
-         "source": "./packages/all",
+         "source": "./packages/vm/all",
          "type": "file"
       },
       {

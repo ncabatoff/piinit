@@ -13,7 +13,6 @@ packer build packer-docker.json
 
 # We use some different config in the docker env (e.g. consul PSK) so build
 # private 'all' packages here.
-cd /home/vagrant
 jsonnet -o packer-docker-server-cn.json /vagrant/packer-docker-server-cn.jsonnet
 packer build packer-docker-server-cn.json
 jsonnet -o packer-docker-server-mon.json /vagrant/packer-docker-server-mon.jsonnet

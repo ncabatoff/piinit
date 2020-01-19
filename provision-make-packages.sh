@@ -16,9 +16,8 @@ pkgbuilder -arches amd64
 
 # We use some different config in the docker env (e.g. consul PSK) so build
 # private 'all' packages here.
-mkdir -p /home/vagrant/packages
-cd /home/vagrant/packages
-rsync -r /vagrant/packages/amd64 ./
+mkdir -p ./vm
+cd ./vm
 encrypt=`dd if=/dev/urandom bs=16 count=1 2>/dev/null | base64`
 pkgbuilder -arches all -config '{
   "ConsulSerfEncrypt": "'"$encrypt"'",

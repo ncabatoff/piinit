@@ -19,20 +19,17 @@ local lib = import 'packer.jsonnet';
     ],
   ],
   provisioners:
-    lib.prov_custompkgs("./packages/", ["all"]) +
-    lib.prov_aptinst_noupdate([
-       "./all/nomad-config-server.deb",
-       "./all/nomad-config-local.deb",
-       "./all/consul-config-server.deb",
-       "./all/consul-config-local.deb",
-       "./all/node_exporter-supervisord.deb",
-       "./all/process-exporter-config.deb",
-       "./all/raspberrypi_exporter.deb",
-    ]) +
+    lib.prov_custompkgs("./packages/vm/", ["all"]) +
       [
+        {
+          type: "file",
+          source: "/vagrant/provision-install-packages.sh",
+          destination: "./",
+        },
         {
           type: "shell",
           inline: [
+            "./provision-install-packages.sh '' ./all server",
             "supervisorctl stop consul",
              "rm -rf /opt/consul/data/*",
             "supervisorctl stop nomad",

@@ -29,14 +29,18 @@
       {
          "inline": [
             "apt-get update -y",
-            "DEBIAN_FRONTEND=noninteractive apt-get install -y supervisor iproute2 curl procps dnsutils vim-tiny net-tools"
+            "DEBIAN_FRONTEND=noninteractive apt-get install -y iproute2 curl procps dnsutils vim-tiny net-tools"
          ],
          "type": "shell"
       },
       {
+         "destination": "./",
+         "source": "/vagrant/provision-install-packages.sh",
+         "type": "file"
+      },
+      {
          "inline": [
-            "apt-get update -y",
-            "DEBIAN_FRONTEND=noninteractive apt-get install -y ./amd64/consul.deb ./amd64/nomad.deb ./amd64/node_exporter.deb ./amd64/process-exporter.deb ./amd64/script-exporter.deb"
+            "./provision-install-packages.sh ./amd64"
          ],
          "type": "shell"
       }
