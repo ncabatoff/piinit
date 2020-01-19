@@ -1,0 +1,50 @@
+{
+   "builders": [
+      {
+         "changes": [
+            "ENTRYPOINT /usr/bin/supervisord --nodaemon",
+            "EXPOSE 9100 9090"
+         ],
+         "commit": true,
+         "image": "piinit/hashinode:latest",
+         "pull": false,
+         "type": "docker"
+      }
+   ],
+   "post-processors": [
+      [
+         {
+            "repository": "piinit/hashinode-mon",
+            "tag": "latest",
+            "type": "docker-tag"
+         }
+      ]
+   ],
+   "provisioners": [
+      {
+         "destination": "amd64",
+         "generated": true,
+         "source": "./packages/amd64",
+         "type": "file"
+      },
+      {
+         "destination": "all",
+         "generated": true,
+         "source": "./packages/vm/all",
+         "type": "file"
+      },
+      {
+         "inline": [
+            "DEBIAN_FRONTEND=noninteractive apt-get install -y ./amd64/prometheus.deb ./amd64/consul_exporter.deb ./all/prometheus-config-local.deb ./all/consul-config-client.deb ./all/consul-config-local.deb ./all/node_exporter-supervisord.deb ./all/process-exporter-config.deb ./all/raspberrypi_exporter.deb"
+         ],
+         "type": "shell"
+      },
+      {
+         "inline": [
+            "supervisorctl stop consul",
+            "rm -rf /opt/consul/data/*"
+         ],
+         "type": "shell"
+      }
+   ]
+}

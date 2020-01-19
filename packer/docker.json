@@ -1,0 +1,48 @@
+{
+   "builders": [
+      {
+         "changes": [
+            "ENTRYPOINT /usr/bin/supervisord --nodaemon",
+            "EXPOSE 9100"
+         ],
+         "commit": true,
+         "image": "debian:stretch-slim",
+         "type": "docker"
+      }
+   ],
+   "post-processors": [
+      [
+         {
+            "repository": "piinit/hashinode",
+            "tag": "latest",
+            "type": "docker-tag"
+         }
+      ]
+   ],
+   "provisioners": [
+      {
+         "destination": "amd64",
+         "generated": true,
+         "source": "./packages/amd64",
+         "type": "file"
+      },
+      {
+         "inline": [
+            "apt-get update -y",
+            "DEBIAN_FRONTEND=noninteractive apt-get install -y iproute2 curl procps dnsutils vim-tiny net-tools"
+         ],
+         "type": "shell"
+      },
+      {
+         "destination": "./",
+         "source": "/vagrant/provision/install-packages.sh",
+         "type": "file"
+      },
+      {
+         "inline": [
+            "./install-packages.sh ./amd64"
+         ],
+         "type": "shell"
+      }
+   ]
+}
