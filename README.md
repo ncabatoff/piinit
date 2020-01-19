@@ -39,7 +39,7 @@ To test that everything is running, go to:
 
 Note that although the cluster will be restarted when the VM is rebooted, its
 state will be wiped.  This is by design, though it's easy enough to add volume
-mappings to provision-docker-launch.sh (and/or /etc/rc.local) if you'd rather 
+mappings to docker-launch.sh (and/or /etc/rc.local) if you'd rather 
 the state be persisted.
 
 # Real environment

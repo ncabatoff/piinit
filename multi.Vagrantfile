@@ -30,12 +30,12 @@ Vagrant.configure("2") do |config|
         vb.customize [ "guestproperty", "set", :id, "/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold", 1000 ]
       end
       if node[:hostname] == 'builder'
-        nodeconfig.vm.provision "build-env", type: "shell", :path => "provision-build-env.sh", privileged: false
-        nodeconfig.vm.provision "make-pkgs", type: "shell", :path => "provision-make-packages.sh", privileged: false
+        nodeconfig.vm.provision "build-env", type: "shell", :path => "provision/build-env.sh", privileged: false
+        nodeconfig.vm.provision "make-pkgs", type: "shell", :path => "provision/make-packages.sh", privileged: false
       else
         nodeconfig.vm.provision "shell" do |s|
           s.name = "install-pkgs"
-          s.path = "provision-install-packages.sh"
+          s.path = "provision/install-packages.sh"
           s.args = ["/vagrant/packages/amd64", "/vagrant/packages/vm/all",
             node[:hostname].start_with?("srv") ? "server": "client"]
           s.privileged = true

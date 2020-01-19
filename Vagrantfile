@@ -18,10 +18,10 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", inline:
      "ps aux | grep 'sshd:' | awk '{print $2}' | xargs kill"
 
-  config.vm.provision "build-env", type: "shell", :path => "provision-build-env.sh", privileged: false
-  config.vm.provision "make-pkgs", type: "shell", :path => "provision-make-packages.sh", privileged: false
-  config.vm.provision "make-images", type: "shell", :path => "provision-make-images.sh", privileged: false
-  config.vm.provision "cluster-client", type: "shell", :path => "provision-vagrant-cluster.sh", privileged: true
+  config.vm.provision "build-env", type: "shell", :path => "provision/build-env.sh", privileged: false
+  config.vm.provision "make-pkgs", type: "shell", :path => "provision/make-packages.sh", privileged: false
+  config.vm.provision "make-images", type: "shell", :path => "provision/make-images.sh", privileged: false
+  config.vm.provision "cluster-client", type: "shell", :path => "provision/vagrant-cluster.sh", privileged: true
 
   config.vm.network "forwarded_port", guest: 18500, host: 48500  # consul
   config.vm.network "forwarded_port", guest: 14646, host: 44646  # nomad
