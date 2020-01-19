@@ -1,27 +1,24 @@
 #!/bin/bash
 
 set -e
-goVersion=1.11
+goVersion=1.13.6
 packerVersion=1.3.4
 
 sudo apt-get update -qq
-sudo apt-get install -y software-properties-common language-pack-en
-sudo add-apt-repository --yes ppa:gophers/archive
-
-# Install required packages
-sudo apt-get update
 sudo apt-get install -y \
     jq \
     git \
     wget \
     curl \
     vim \
-    unzip \
-    golang-${goVersion}-go
+    unzip
+
+curl -s -O https://dl.google.com/go/go${goVersion}.linux-amd64.tar.gz
+tar zxf go${goVersion}.linux-amd64.tar.gz
 
 # Set GO paths for vagrant user
 (
-  echo "export GOROOT=/usr/lib/go-${goVersion}"
+  echo 'export GOROOT=$HOME/go'
   echo 'export GOPATH=$HOME/work'
   echo 'export PATH=$PATH:$GOROOT/bin:$GOPATH/bin'
   echo 'export NETWORK=192.168.2'
