@@ -5,16 +5,17 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/goreleaser/nfpm"
-	_ "github.com/goreleaser/nfpm/deb"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/goreleaser/nfpm"
+	_ "github.com/goreleaser/nfpm/deb"
+	"github.com/hashicorp/go-getter"
 )
 
 const (
@@ -817,74 +818,88 @@ func (o Options) getURL() string {
 	return ""
 }
 
+// dldirToBinary takes as input dldir, a directory that go-getter wrote to,
+// and the name of an upstream package (e.g. "consul").  It returns the binary
+// which lives under dldir, unqualified (no slashes).
+// We support two scenarios: either the binary is the sole file directly under
+// dldir and we don't care what it's named, or dldir contains 1+ files of which one
+// matches the name argument, and that's the one we return.
+func dldirToBinary(dldir, name string) string {
+	var source os.FileInfo
+	fis, err := ioutil.ReadDir(dldir)
+	if err != nil {
+		log.Fatalf("error reading dir %s: %v", dldir, err)
+	}
+
+	if len(fis) == 1 {
+		return fis[0].Name()
+	}
+
+	var fnames []string
+	for _, fi := range fis {
+		if fi.Name() == name {
+			return name
+		}
+
+		fnames = append(fnames, fi.Name())
+	}
+	if source == nil {
+		log.Fatalf("expected exactly one file in %q or a file named %q, but found: %v", dldir, name, fnames)
+	}
+	return ""
+}
+
+// getBinary fetches the binary if it's not already present locally, returning
+// the path at which it may be found on disk.
 func (b *builder) getBinary() string {
 	o := b.options
 	name := fmt.Sprintf("%s-%s-%s", o.name, o.version, o.arch)
-	binname := "bin/" + name
 	dldir := "downloads/" + name
 
+	if o.upstreamScript != "" {
+		// Simplest way to avoid corrupting a script that was already downloaded
+		// is just to re-download it.  They're small.
+		os.Remove(filepath.Join(dldir, o.name))
+	}
+
+	binname := filepath.Join(dldir, o.name)
 	_, err := os.Stat(binname)
 	if err == nil {
 		return binname
 	}
 	if _, ok := err.(*os.PathError); !ok {
-		log.Fatalf("error stating %q: %v", o.name, err)
+		log.Fatalf("error stating %q: %v", binname, err)
 	}
 
-	url := o.getURL()
-	cmd := exec.Command("go-getter", url, dldir)
-	err = cmd.Run()
-	if err != nil {
-		log.Fatalf("error fetching %s: %v", url, err)
+	client := &getter.Client{
+		Src:  o.getURL(),
+		Dst:  dldir,
+		Mode: getter.ClientModeAny,
+	}
+	if err := client.Get(); err != nil {
+		log.Fatal(err)
 	}
 
-	var source os.FileInfo
-
-	{
-		fis, err := ioutil.ReadDir(dldir)
+	relbin := dldirToBinary(dldir, o.name)
+	fullbin := filepath.Join(dldir, o.name)
+	if relbin != o.name {
+		err = os.Rename(filepath.Join(dldir, relbin), fullbin)
 		if err != nil {
-			log.Fatalf("error reading dir %s: %v", dldir, err)
-		}
-
-		// We support either a single file with arbitrary name, or a single directory
-		// containing 1+ files of which one is named after the project.
-		if len(fis) == 1 {
-			source = fis[0]
-		} else {
-			var fnames []string
-			for _, fi := range fis {
-				fnames = append(fnames, fi.Name())
-				if fi.Name() == o.name {
-					source = fi
-				}
-			}
-			if source == nil {
-				log.Fatalf("expected exactly one file in %s, but found: %v", dldir, fnames)
-			}
+			log.Fatal(err)
 		}
 	}
 
-	src := filepath.Join(dldir, source.Name())
-	if source.IsDir() {
-		src = filepath.Join(dldir, source.Name(), o.name)
-	}
-
-	_ = os.Mkdir("bin", 0755)
-	err = os.Link(src, binname)
+	err = os.Chmod(fullbin, 0755)
 	if err != nil {
-		log.Fatalf("error hard linking %s to %s: %v", src, binname, err)
+		log.Fatal(err)
 	}
 
-	if source.Mode().Perm()&0111 != 0111 {
-		err = os.Chmod(binname, source.Mode().Perm()|0111)
-		if err != nil {
-			log.Fatalf("error chmodding %s to %o: %v", binname, source.Mode().Perm()|0111, err)
-		}
-	}
-
-	return binname
+	return fullbin
 }
 
+// writeFiles writes the files specified in the builder options to disk,
+// returning a map from their current on-disk location to where they belong
+// in the output package.
 func (b *builder) writeFiles(cfg map[string]interface{}) map[string]string {
 	ret := make(map[string]string)
 
